@@ -46,6 +46,17 @@ public class BigQueryFilters {
         function.setGenericUDF(new BigQueryUDFMod());
       } else if (function.getGenericUDF() instanceof GenericUDFRegExp) {
         function.setGenericUDF(new BigQueryUDFRegExpContains());
+      } else if (function.getGenericUDF() instanceof GenericUDFBridge) {
+        GenericUDFBridge bridge = (GenericUDFBridge) function.getGenericUDF();
+        if (bridge.getUdfName().equals("UDFToDouble")) {
+          function.setGenericUDF(new BigQueryUDFToDouble());
+        } else if (bridge.getUdfName().equals("UDFToInteger")) {
+          function.setGenericUDF(new BigQueryUDFToInteger());
+        } else if (bridge.getUdfName().equals("UDFToByte")) {
+          function.setGenericUDF(new BigQueryUDFToByte());
+        } else if (bridge.getUdfName().equals("UDFToFloat")) {
+          function.setGenericUDF(new BigQueryUDFToFloat());
+        }
       }
       // Translate the children parameters
       List<ExprNodeDesc> translatedChildren = new ArrayList<>();
