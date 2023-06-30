@@ -36,7 +36,6 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.tez.mapreduce.hadoop.MRJobConfig;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -112,11 +111,6 @@ public class IntegrationTestsBase {
     hive.setHiveConfValue(HiveConf.ConfVars.HIVECONVERTJOIN.varname, "true");
     // Enable vectorize mode
     hive.setHiveConfValue(HiveConf.ConfVars.HIVE_VECTORIZATION_ENABLED.varname, "true");
-    hive.setHiveConfValue(
-        MetastoreConf.ConfVars.SERDES_USING_METASTORE_FOR_SCHEMA.getHiveName(),
-        MetastoreConf.ConfVars.SERDES_USING_METASTORE_FOR_SCHEMA.getDefaultVal()
-            + ","
-            + "com.google.cloud.hive.bigquery.connector.BigQuerySerDe");
     String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
     this.tempGcsDir = TEMP_GCS_DIR_PREFIX + timestamp;
   }
@@ -279,13 +273,16 @@ public class IntegrationTestsBase {
   }
 
   protected static String getDefaultExecutionEngine() {
-    return "tez";
+    return "mr";
   }
 
   protected static final String EXECUTION_ENGINE = "executionEngineParameter";
 
   protected static Stream<Arguments> executionEngineParameter() {
-    return Stream.of(Arguments.of("mr"), Arguments.of("tez"));
+    return Stream.of(
+        Arguments.of("mr")
+        //        Arguments.of("tez")
+        );
   }
 
   protected static final String READ_FORMAT = "readFormatParameter";
@@ -309,7 +306,9 @@ public class IntegrationTestsBase {
     List<String> readFormats = Arrays.asList(HiveBigQueryConfig.ARROW, HiveBigQueryConfig.AVRO);
     Collections.shuffle(readFormats);
     return Stream.of(
-        Arguments.of("mr", readFormats.get(0)), Arguments.of("tez", readFormats.get(1)));
+        Arguments.of("mr", readFormats.get(0))
+        //        Arguments.of("tez", readFormats.get(1))
+        );
   }
 
   protected static final String EXECUTION_ENGINE_WRITE_METHOD =
@@ -321,7 +320,9 @@ public class IntegrationTestsBase {
             HiveBigQueryConfig.WRITE_METHOD_DIRECT, HiveBigQueryConfig.WRITE_METHOD_INDIRECT);
     Collections.shuffle(writeMethods);
     return Stream.of(
-        Arguments.of("mr", writeMethods.get(0)), Arguments.of("tez", writeMethods.get(1)));
+        Arguments.of("mr", writeMethods.get(0))
+        //        Arguments.of("tez", writeMethods.get(1))
+        );
   }
 
   protected static final String EXECUTION_ENGINE_READ_FORMAT_WRITE_METHOD =
@@ -335,7 +336,8 @@ public class IntegrationTestsBase {
     Collections.shuffle(readFormats);
     Collections.shuffle(writeMethods);
     return Stream.of(
-        Arguments.of("mr", readFormats.get(0), writeMethods.get(0)),
-        Arguments.of("tez", readFormats.get(1), writeMethods.get(1)));
+        Arguments.of("mr", readFormats.get(0), writeMethods.get(0))
+        //        Arguments.of("tez", readFormats.get(1), writeMethods.get(1))
+        );
   }
 }

@@ -18,20 +18,19 @@ package com.google.cloud.hive.bigquery.connector.input.arrow;
 import com.google.cloud.hive.bigquery.connector.utils.DateTimeUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.StructVector;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
-import org.apache.hadoop.hive.common.type.Timestamp;
-import org.apache.hadoop.hive.common.type.TimestampTZ;
-import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
-import org.apache.hadoop.hive.serde2.io.DateWritableV2;
+import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.io.ShortWritable;
+import org.apache.hadoop.hive.serde2.io.TimestampWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.*;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.*;
 import org.apache.hadoop.io.*;
@@ -100,19 +99,13 @@ public class ArrowSerializer {
     }
 
     if (objectInspector instanceof DateObjectInspector) {
-      return new DateWritableV2(((DateDayVector) value).get(rowId));
+      return new DateWritable(((DateDayVector) value).get(rowId));
     }
 
     if (objectInspector instanceof TimestampObjectInspector) {
       LocalDateTime localDateTime = ((TimeStampMicroVector) value).getObject(rowId);
       Timestamp timestamp = DateTimeUtils.getHiveTimestampFromLocalDatetime(localDateTime);
-      return new TimestampWritableV2(timestamp);
-    }
-
-    if (objectInspector instanceof TimestampLocalTZObjectInspector) {
-      long longValue = ((TimeStampMicroTZVector) value).get(rowId);
-      TimestampTZ timestampTZ = DateTimeUtils.getHiveTimestampTZFromUTC(longValue);
-      return new TimestampLocalTZWritable(timestampTZ);
+      return new TimestampWritable(timestamp);
     }
 
     if (objectInspector instanceof ListObjectInspector) { // Array/List type

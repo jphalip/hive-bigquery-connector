@@ -22,8 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -145,17 +143,16 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
   @MethodSource(EXECUTION_ENGINE_READ_FORMAT)
   public void testCount(String engine, String readDataFormat) {
     initHive(engine, readDataFormat);
-    createExternalTable(TEST_TABLE_NAME, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
+    String tableName = "counting";
+    createExternalTable(tableName, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
     // Create some initial data in BQ
     runBqQuery(
-        String.format(
-            "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", TEST_TABLE_NAME));
-    TableResult result =
-        runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", TEST_TABLE_NAME));
+        String.format("INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", tableName));
+    TableResult result = runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", tableName));
     // Make sure the initial data is there
     assertEquals(2, result.getTotalRows());
     // Run COUNT query in Hive
-    List<Object[]> rows = runHiveQuery("SELECT COUNT(*) FROM " + TEST_TABLE_NAME);
+    List<Object[]> rows = runHiveQuery("SELECT COUNT(*) FROM " + tableName);
     assertEquals(1, rows.size());
     assertEquals(2L, rows.get(0)[0]);
   }
@@ -359,8 +356,6 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
             "cast(\"2019-03-18\" as date),",
             // Wall clock (no timezone)
             "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
-            // (Pacific/Honolulu, -10:00)
-            "cast(\"2000-01-01T00:23:45.123456-10\" as timestamp),",
             "cast(\"bytes\" as bytes),",
             "2.0,",
             "4.2,",
@@ -380,7 +375,7 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
     List<Object[]> rows = runHiveQuery("SELECT * FROM " + ALL_TYPES_TABLE_NAME);
     assertEquals(1, rows.size());
     Object[] row = rows.get(0);
-    assertEquals(19, row.length); // Number of columns
+    assertEquals(18, row.length); // Number of columns
     assertEquals((byte) 11, row[0]);
     assertEquals((short) 22, row[1]);
     assertEquals((int) 33, row[2]);
@@ -391,26 +386,20 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
     assertEquals("string", row[7]);
     assertEquals("2019-03-18", row[8]);
     assertEquals("2000-01-01 00:23:45.123456", row[9]);
-    assertEquals(
-        "2000-01-01T10:23:45.123456Z", // 'Z' == UTC
-        Instant.from(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS VV")
-                    .parse(row[10].toString()))
-            .toString());
-    assertArrayEquals("bytes".getBytes(), (byte[]) row[11]);
-    assertEquals(2.0, row[12]);
-    assertEquals(4.2, row[13]);
+    assertArrayEquals("bytes".getBytes(), (byte[]) row[10]);
+    assertEquals(2.0, row[11]);
+    assertEquals(4.2, row[12]);
     assertEquals(
         "{\"min\":-99999999999999999999999999999.999999999,\"max\":99999999999999999999999999999.999999999,\"pi\":3.14,\"big_pi\":31415926535897932384626433832.795028841}",
-        row[14]);
-    assertEquals("[1,2,3]", row[15]);
-    assertEquals("[{\"i\":111},{\"i\":222},{\"i\":333}]", row[16]);
-    assertEquals("{\"float_field\":4.2,\"ts_field\":\"2019-03-18 11:23:45.678901\"}", row[17]);
+        row[13]);
+    assertEquals("[1,2,3]", row[14]);
+    assertEquals("[{\"i\":111},{\"i\":222},{\"i\":333}]", row[15]);
+    assertEquals("{\"float_field\":4.2,\"ts_field\":\"2019-03-18 11:23:45.678901\"}", row[16]);
     // Map type
     ObjectMapper mapper = new ObjectMapper();
     TypeReference<HashMap<String, HashMap<String, Integer>>> typeRef =
         new TypeReference<HashMap<String, HashMap<String, Integer>>>() {};
-    HashMap<String, HashMap<String, Integer>> map = mapper.readValue(row[18].toString(), typeRef);
+    HashMap<String, HashMap<String, Integer>> map = mapper.readValue(row[17].toString(), typeRef);
     assertEquals(2, map.size());
     assertEquals(
         new HashMap() {
@@ -449,8 +438,6 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
                 "\n OR ",
                 "TO_DATE(str) > DATE'2023-03-24' and TO_DATE(ts) < DATE'2024-02-18'",
                 "DAYOFWEEK(ts) = 2 AND QUARTER(ts) = 1 AND WEEKOFYEAR(day) = 4",
-                "YEAR(ts) = 2013 AND MONTH(ts) = 2 AND DAY(ts) = 21 AND HOUR(ts) = 5 AND"
-                    + " MINUTE(ts) = 33 AND SECOND(ts) = 17",
                 "(CASE int_val WHEN 90 THEN str ELSE 'green' END) = 'green'",
                 "HEX(bin) = 'abcd'",
                 "UNHEX(str) = CAST('abcd' AS BINARY)",
@@ -492,11 +479,6 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
                 "ISNULL(bl)",
                 "ISNOTNULL(int_val)",
                 "big_int_val IS NOT NULL",
-                "bl is TRUE",
-                "(fl IS NULL) IS FALSE",
-                "(small_int_val IS NULL) IS TRUE",
-                "(tiny_int_val IS NULL) IS NOT TRUE",
-                "(int_val IS NOT NULL) IS TRUE",
                 "int_val & 2 > 99",
                 "int_val | 2 < 99",
                 "int_val ^ 2 >= 99",
@@ -658,7 +640,6 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
             "NULL,",
             "NULL,",
             "NULL,",
-            "NULL,",
             "2.0,",
             "4.2,",
             "struct(",
@@ -757,7 +738,6 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
                 " OR\n",
                 "CAST(str as DATE) = '2010-10-10'",
                 "CAST(str as TIMESTAMP) = '2010-10-10'",
-                "CAST(str as TIMESTAMPLOCALTZ) = '2010-10-10'",
                 "CAST(str as BINARY) = CAST('abcd' as BINARY)",
                 "CAST(tiny_int_val as STRING) = '2'",
                 "CAST(tiny_int_val as VARCHAR(20)) = '2'",

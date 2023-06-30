@@ -70,11 +70,14 @@ public class PartitionIntegrationTests extends IntegrationTestsBase {
     List<Object[]> rows =
         hive.executeStatement("DESCRIBE " + INGESTION_TIME_PARTITIONED_TABLE_NAME);
     // Verify that the partition pseudo columns were added.
+    // Note: In Hive 2 there's a bug where "DESCRIBE <table>" returns "from deserializer" for
+    // all column comments. See: https://issues.apache.org/jira/browse/HIVE-15374
+    // This bug doesn't occur with Hive 3.
     assertArrayEquals(
         new Object[] {
-          new Object[] {"int_val", "bigint", ""},
-          new Object[] {"_partitiontime", "timestamp", "Ingestion time pseudo column"},
-          new Object[] {"_partitiondate", "date", "Ingestion time pseudo column"}
+          new Object[] {"int_val", "bigint", "from deserializer"},
+          new Object[] {"_partitiontime", "timestamp", "from deserializer"},
+          new Object[] {"_partitiondate", "date", "from deserializer"}
         },
         rows.toArray());
   }
@@ -96,8 +99,7 @@ public class PartitionIntegrationTests extends IntegrationTestsBase {
             INGESTION_TIME_PARTITIONED_TABLE_NAME));
     runHiveQuery(
         String.format(
-            "SELECT * from %s WHERE `_PARTITIONTIME` > TIMESTAMPLOCALTZ'2000-01-01 00:23:45.123456"
-                + " Pacific/Honolulu'",
+            "SELECT * from %s WHERE `_PARTITIONTIME` > '2000-01-01 00:23:45.123456'",
             INGESTION_TIME_PARTITIONED_TABLE_NAME));
   }
 }

@@ -100,12 +100,7 @@ public class BigQueryFilters {
     }
     for (Class udf :
         new Class[] {
-          GenericUDFOPNull.class,
-          GenericUDFOPNotNull.class,
-          GenericUDFOPTrue.class,
-          GenericUDFOPNotTrue.class,
-          GenericUDFOPFalse.class,
-          GenericUDFOPNotFalse.class,
+          GenericUDFOPNull.class, GenericUDFOPNotNull.class,
         }) {
       requireExtraParentheses.add(udf.getName());
     }
@@ -126,18 +121,6 @@ public class BigQueryFilters {
     }
     if (udf instanceof GenericUDFNvl) {
       return new BigQueryUDFIfNull();
-    } else if (udf instanceof UDFYear) {
-      return new BigQueryUDFYear();
-    } else if (udf instanceof UDFMonth) {
-      return new BigQueryUDFMonth();
-    } else if (udf instanceof UDFDayOfMonth) {
-      return new BigQueryUDFDayOfMonth();
-    } else if (udf instanceof UDFHour) {
-      return new BigQueryUDFHour();
-    } else if (udf instanceof UDFMinute) {
-      return new BigQueryUDFMinute();
-    } else if (udf instanceof UDFSecond) {
-      return new BigQueryUDFSecond();
     } else if (udf instanceof GenericUDFQuarter) {
       return new BigQueryUDFQuarter();
     } else if (udf instanceof GenericUDFDateDiff) {
@@ -156,8 +139,6 @@ public class BigQueryFilters {
       return new BigQueryUDFCastDate();
     } else if (udf instanceof GenericUDFTimestamp) {
       return new BigQueryUDFCastDatetime();
-    } else if (udf instanceof GenericUDFToTimestampLocalTZ) {
-      return new BigQueryUDFCastTimestamp();
     } else if (udf instanceof GenericUDFToBinary) {
       return new BigQueryUDFCastBytes();
     } else if (udf instanceof GenericUDFToVarchar) {

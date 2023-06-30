@@ -68,9 +68,6 @@ public class BigQueryConstantDesc extends ExprNodeConstantDesc {
     if (typeInfo.equals(timestampTypeInfo)) {
       return "DATETIME'" + value + "'";
     }
-    if (typeInfo instanceof TimestampLocalTZTypeInfo) {
-      return "TIMESTAMP'" + value + "'";
-    }
     if (typeInfo.equals(intervalDayTimeTypeInfo)) {
       HiveIntervalDayTime intervalDayTime = (HiveIntervalDayTime) value;
       return "INTERVAL '"

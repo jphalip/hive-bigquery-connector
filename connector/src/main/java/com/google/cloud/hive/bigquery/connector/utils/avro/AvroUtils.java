@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.TimeZone;
 import java.util.UUID;
 import org.apache.avro.Schema;
 import org.apache.avro.file.CodecFactory;
@@ -38,7 +37,6 @@ import org.apache.avro.mapred.AvroOutputFormat;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.serde2.avro.AvroSerDe;
 import org.apache.hadoop.hive.serde2.objectinspector.*;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.*;
 import org.apache.hadoop.mapred.JobConf;
@@ -119,11 +117,6 @@ public class AvroUtils {
                 bigqueryField.getName(),
                 fieldOi.getTypeName()));
       }
-      return modedAvroSchema(schema, nullable);
-    }
-    if (fieldOi instanceof TimestampLocalTZObjectInspector) {
-      Schema schema = Schema.create(Schema.Type.LONG);
-      schema.addProp("logicalType", "timestamp-micros");
       return modedAvroSchema(schema, nullable);
     }
     if (fieldOi instanceof DateObjectInspector) {
@@ -208,7 +201,6 @@ public class AvroUtils {
             ? CodecFactory.deflateCodec(level)
             : CodecFactory.fromString(codecName);
     dataFileWriter.setCodec(factory);
-    dataFileWriter.setMeta(AvroSerDe.WRITER_TIME_ZONE, TimeZone.getDefault().toZoneId().toString());
     try {
       FileSystem fileSystem = filePath.getFileSystem(jobConf);
       FSDataOutputStream fsDataOutputStream = fileSystem.create(filePath);
