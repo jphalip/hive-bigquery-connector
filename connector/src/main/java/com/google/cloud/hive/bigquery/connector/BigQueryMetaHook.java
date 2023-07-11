@@ -259,24 +259,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
       if (partitionField.isPresent()) {
         tpBuilder.setField(partitionField.get());
       } else {
-        // This is an ingestion-time partition table, so we add the BigQuery
-        // pseudo columns to the Hive MetaStore schema.
-        assertDoesNotContainColumn(table, HiveBigQueryConfig.PARTITION_TIME_PSEUDO_COLUMN);
-        table
-            .getSd()
-            .addToCols(
-                new FieldSchema(
-                    HiveBigQueryConfig.PARTITION_TIME_PSEUDO_COLUMN,
-                    "timestamp",
-                    "Ingestion time pseudo column"));
-        assertDoesNotContainColumn(table, HiveBigQueryConfig.PARTITION_DATE_PSEUDO_COLUMN);
-        table
-            .getSd()
-            .addToCols(
-                new FieldSchema(
-                    HiveBigQueryConfig.PARTITION_DATE_PSEUDO_COLUMN,
-                    "date",
-                    "Ingestion time pseudo column"));
+        throw new MetaException("Ingestion-time partitioned tables are not supported in Hive v2.");
       }
       OptionalLong partitionExpirationMs = opts.getPartitionExpirationMs();
       if (partitionExpirationMs.isPresent()) {

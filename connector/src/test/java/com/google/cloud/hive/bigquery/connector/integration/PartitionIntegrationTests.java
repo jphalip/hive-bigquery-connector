@@ -22,9 +22,15 @@ import com.google.cloud.bigquery.Clustering;
 import com.google.cloud.bigquery.StandardTableDefinition;
 import com.google.cloud.bigquery.TimePartitioning;
 import com.google.common.collect.ImmutableList;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class PartitionIntegrationTests extends IntegrationTestsBase {
 
@@ -50,56 +56,4 @@ public class PartitionIntegrationTests extends IntegrationTestsBase {
     assertEquals(ImmutableList.of("int_val"), Objects.requireNonNull(clustering).getFields());
   }
 
-  @Test
-  public void testCreateIngestionTimePartition() {
-    initHive();
-    // Make sure the BQ table doesn't exist
-    dropBqTableIfExists(dataset, INGESTION_TIME_PARTITIONED_TABLE_NAME);
-    // Create the table using Hive
-    createManagedTable(
-        INGESTION_TIME_PARTITIONED_TABLE_NAME,
-        HIVE_INGESTION_TIME_PARTITIONED_DDL,
-        HIVE_INGESTION_TIME_PARTITIONED_PROPS,
-        null);
-    // Retrieve the table metadata from BigQuery
-    StandardTableDefinition tableDef =
-        getTableInfo(dataset, INGESTION_TIME_PARTITIONED_TABLE_NAME).getDefinition();
-    TimePartitioning timePartitioning = tableDef.getTimePartitioning();
-    assertEquals(TimePartitioning.Type.DAY, timePartitioning.getType());
-    assertNull(timePartitioning.getField());
-    List<Object[]> rows =
-        hive.executeStatement("DESCRIBE " + INGESTION_TIME_PARTITIONED_TABLE_NAME);
-    // Verify that the partition pseudo columns were added.
-    // Note: In Hive 2 there's a bug where "DESCRIBE <table>" returns "from deserializer" for
-    // all column comments. See: https://issues.apache.org/jira/browse/HIVE-15374
-    // This bug doesn't occur with Hive 3.
-    assertArrayEquals(
-        new Object[] {
-          new Object[] {"int_val", "bigint", "from deserializer"},
-          new Object[] {"_partitiontime", "timestamp", "from deserializer"},
-          new Object[] {"_partitiondate", "date", "from deserializer"}
-        },
-        rows.toArray());
-  }
-
-  @Test
-  public void testQueryIngestionTimePartition() {
-    initHive();
-    // Make sure the BQ table doesn't exist
-    dropBqTableIfExists(dataset, INGESTION_TIME_PARTITIONED_TABLE_NAME);
-    // Create the table using Hive
-    createManagedTable(
-        INGESTION_TIME_PARTITIONED_TABLE_NAME,
-        HIVE_INGESTION_TIME_PARTITIONED_DDL,
-        HIVE_INGESTION_TIME_PARTITIONED_PROPS,
-        null);
-    runHiveQuery(
-        String.format(
-            "SELECT * from %s WHERE `_PARTITIONDATE` <= DATE'2019-08-02'",
-            INGESTION_TIME_PARTITIONED_TABLE_NAME));
-    runHiveQuery(
-        String.format(
-            "SELECT * from %s WHERE `_PARTITIONTIME` > '2000-01-01 00:23:45.123456'",
-            INGESTION_TIME_PARTITIONED_TABLE_NAME));
-  }
 }
