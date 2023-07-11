@@ -273,16 +273,13 @@ public class IntegrationTestsBase {
   }
 
   protected static String getDefaultExecutionEngine() {
-    return "mr";
+    return "tez";
   }
 
   protected static final String EXECUTION_ENGINE = "executionEngineParameter";
 
   protected static Stream<Arguments> executionEngineParameter() {
-    return Stream.of(
-        Arguments.of("mr")
-        //        Arguments.of("tez")
-        );
+    return Stream.of(Arguments.of("mr"), Arguments.of("tez"));
   }
 
   protected static final String READ_FORMAT = "readFormatParameter";
@@ -306,9 +303,7 @@ public class IntegrationTestsBase {
     List<String> readFormats = Arrays.asList(HiveBigQueryConfig.ARROW, HiveBigQueryConfig.AVRO);
     Collections.shuffle(readFormats);
     return Stream.of(
-        Arguments.of("mr", readFormats.get(0))
-        //        Arguments.of("tez", readFormats.get(1))
-        );
+        Arguments.of("mr", readFormats.get(0)), Arguments.of("tez", readFormats.get(1)));
   }
 
   protected static final String EXECUTION_ENGINE_WRITE_METHOD =
@@ -320,9 +315,7 @@ public class IntegrationTestsBase {
             HiveBigQueryConfig.WRITE_METHOD_DIRECT, HiveBigQueryConfig.WRITE_METHOD_INDIRECT);
     Collections.shuffle(writeMethods);
     return Stream.of(
-        Arguments.of("mr", writeMethods.get(0))
-        //        Arguments.of("tez", writeMethods.get(1))
-        );
+        Arguments.of("mr", writeMethods.get(0)), Arguments.of("tez", writeMethods.get(1)));
   }
 
   protected static final String EXECUTION_ENGINE_READ_FORMAT_WRITE_METHOD =
@@ -336,8 +329,7 @@ public class IntegrationTestsBase {
     Collections.shuffle(readFormats);
     Collections.shuffle(writeMethods);
     return Stream.of(
-        Arguments.of("mr", readFormats.get(0), writeMethods.get(0))
-        //        Arguments.of("tez", readFormats.get(1), writeMethods.get(1))
-        );
+        Arguments.of("mr", readFormats.get(0), writeMethods.get(0)),
+        Arguments.of("tez", readFormats.get(1), writeMethods.get(1)));
   }
 }
