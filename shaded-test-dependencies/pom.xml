@@ -112,7 +112,7 @@
 
 
       <!-- The build-helper-maven-plugin is useful to add the shaded JAR into the IDE environment, so that -->
-      <!-- IntelliJ can find the `repackaged.by.hivebqconnector.*` classes. -->
+      <!-- IntelliJ can find the repackaged classes. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>

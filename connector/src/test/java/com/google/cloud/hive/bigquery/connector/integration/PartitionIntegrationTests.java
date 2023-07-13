@@ -22,15 +22,8 @@ import com.google.cloud.bigquery.Clustering;
 import com.google.cloud.bigquery.StandardTableDefinition;
 import com.google.cloud.bigquery.TimePartitioning;
 import com.google.common.collect.ImmutableList;
-import java.io.IOException;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 public class PartitionIntegrationTests extends IntegrationTestsBase {
 
@@ -55,5 +48,4 @@ public class PartitionIntegrationTests extends IntegrationTestsBase {
     Clustering clustering = tableDef.getClustering();
     assertEquals(ImmutableList.of("int_val"), Objects.requireNonNull(clustering).getFields());
   }
-
 }
