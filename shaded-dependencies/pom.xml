@@ -36,10 +36,14 @@
   </licenses>
 
   <!--
-  This module's sole purpose is to shade some libraries (e.g. Guava) to avoid conflicts with other versions that are
-  used by other tools, like Hadoop and Hive. The reason why we shade those libraries in a separate module instead of
-  in the main storage handler module, is to do the shading upstream so that the storage handler's integration tests
-  can run without conflicts.
+  What is this module for?
+
+  This module is used to shade some libraries (e.g. Guava) to avoid conflicts with the connector's
+  dependencies while running integration tests.
+  The libraries shaded here are also shaded in the connector's module itself, so this should not
+  affect anything when the connector is used in production.
+  This module is meant to be added as a dependency in the connector's pom.xml with the `provided`
+  scope.
   -->
 
   <dependencies>
