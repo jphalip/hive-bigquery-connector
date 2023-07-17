@@ -337,17 +337,11 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
 
     TableId destTableId =
         BigQueryUtil.parseTableId(tableParameters.get(HiveBigQueryConfig.TABLE_KEY));
-    TableInfo bqTableInfo = bqClient.getTable(jobDetails.getTableId());
-    if (bqTableInfo == null) {
-      throw new MetaException("BigQuery table does not exist: " + jobDetails.getTableId());
-    }
-    Schema bigQuerySchema = bqTableInfo.getDefinition().getSchema();
 
     if (jobDetails.getTableId() == null) {
       jobDetails.setTableId(destTableId);
     }
     jobDetails.setOverwrite(overwrite);
-    jobDetails.setBigquerySchema(bigQuerySchema);
 
     if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
       // Special case: 'INSERT OVERWRITE' operation while using the 'direct'
@@ -370,16 +364,14 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
                     destTableId.getProject(),
                     destTableId.getDataset(),
                     destTableId.getTable() + "-" + HiveUtils.getQueryId(conf) + "-"),
-                bigQuerySchema);
+                jobDetails.getBigquerySchema());
         // Set the temp table as the job's output table
         jobDetails.setTableId(tempTableInfo.getTableId());
         LOG.info("Insert overwrite temporary table {} ", tempTableInfo.getTableId());
       }
     } else {
-      configJobDetailsForIndirectWrite(opts, jobDetails, bigQuerySchema, injector);
+      configJobDetailsForIndirectWrite(opts, jobDetails, jobDetails.getBigquerySchema(), injector);
     }
-    Path queryTempOutputPath = JobUtils.getQueryTempOutputPath(conf, opts);
-    jobDetails.setJobTempOutputPath(new Path(queryTempOutputPath, hmsDbTableName));
     JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);
   }
 

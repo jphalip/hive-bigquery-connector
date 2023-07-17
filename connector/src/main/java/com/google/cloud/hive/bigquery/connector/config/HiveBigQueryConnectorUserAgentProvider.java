@@ -16,17 +16,12 @@
 package com.google.cloud.hive.bigquery.connector.config;
 
 import com.google.cloud.bigquery.connector.common.UserAgentProvider;
+import com.google.cloud.hive.bigquery.connector.utils.BuildProperties;
 
 public class HiveBigQueryConnectorUserAgentProvider implements UserAgentProvider {
 
-  private final String hiveQueryID;
-
-  public HiveBigQueryConnectorUserAgentProvider(String hiveQueryID) {
-    this.hiveQueryID = hiveQueryID;
-  }
-
   @Override
   public String getUserAgent() {
-    return "Hive-Query-" + hiveQueryID;
+    return "hive-bigQuery-connector/" + BuildProperties.CONNECTOR_VERSION;
   }
 }

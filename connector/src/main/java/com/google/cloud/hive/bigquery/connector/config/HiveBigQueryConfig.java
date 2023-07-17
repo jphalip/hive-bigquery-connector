@@ -56,7 +56,7 @@ public class HiveBigQueryConfig
   public static final String TEMP_GCS_PATH_KEY = "bq.temp.gcs.path";
   public static final String WORK_DIR_PARENT_PATH_KEY = "bq.work.dir.parent.path";
   public static final String WORK_DIR_NAME_PREFIX_KEY = "bq.work.dir.name.prefix";
-  public static final String WORK_DIR_NAME_PREFIX_DEFAULT = "bq-hive-";
+  public static final String WORK_DIR_NAME_PREFIX_DEFAULT = "hivebq_";
   public static final String READ_DATA_FORMAT_KEY = "bq.read.data.format";
   public static final String READ_CREATE_SESSION_TIMEOUT_KEY = "bq.read.create.session.timeout";
   public static final String READ_MAX_PARALLELISM = "maxParallelism";
@@ -103,6 +103,8 @@ public class HiveBigQueryConfig
   // Pseudo columns in BigQuery for ingestion time partitioned tables
   public static final String PARTITION_TIME_PSEUDO_COLUMN = "_PARTITIONTIME";
   public static final String PARTITION_DATE_PSEUDO_COLUMN = "_PARTITIONDATE";
+
+  public static final String TRACE_PREFIX = "Hive-BigQuery-Connector:";
 
   TableId tableId;
   Optional<String> traceId = empty();
@@ -653,6 +655,6 @@ public class HiveBigQueryConfig
   }
 
   public static String getTraceId(Configuration conf) {
-    return "Hive:" + HiveUtils.getQueryId(conf);
+    return TRACE_PREFIX + HiveUtils.getQueryId(conf);
   }
 }

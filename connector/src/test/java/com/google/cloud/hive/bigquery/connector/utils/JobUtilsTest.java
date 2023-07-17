@@ -25,7 +25,6 @@ import com.google.cloud.hive.bigquery.connector.output.WriterRegistry;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.TaskAttemptID;
 import org.junit.jupiter.api.Test;
 
 public class JobUtilsTest {
@@ -51,10 +50,10 @@ public class JobUtilsTest {
     conf.set("hive.query.id", "query123");
     conf.set("hadoop.tmp.dir", "/tmp");
     Path path = JobUtils.getQueryWorkDir(conf);
-    assertEquals("/tmp/bq-hive-query123", path.toString());
+    assertEquals("/tmp/hivebq_hive-query-id-query123", path.toString());
     conf.set("bq.work.dir.parent.path", "/my/workdir");
     path = JobUtils.getQueryWorkDir(conf);
-    assertEquals("/my/workdir/bq-hive-query123", path.toString());
+    assertEquals("/my/workdir/hivebq_hive-query-id-query123", path.toString());
   }
 
   @Test
@@ -65,21 +64,22 @@ public class JobUtilsTest {
     String hmsDbTable = "default.mytable";
     Path jobDetailsFilePath = JobUtils.getJobDetailsFilePath(conf, hmsDbTable);
     assertEquals(
-        "/tmp/bq-hive-query123/default.mytable/job-details.json", jobDetailsFilePath.toString());
+        "/tmp/hivebq_hive-query-id-query123/default.mytable/job-details.json",
+        jobDetailsFilePath.toString());
   }
 
   @Test
   public void testGetTaskWriterOutputFile() {
     JobDetails jobDetails = new JobDetails();
-    String tmp = "/tmp/bq-hive-query123/default.mytable";
+    String tmp = "/tmp/hivebq_query123/default.mytable";
     jobDetails.setJobTempOutputPath(new Path(tmp));
     TableId tableId = TableId.of("myproject", "mydataset", "mytable");
     jobDetails.setTableId(tableId);
-    TaskAttemptID taskAttemptID = new TaskAttemptID();
+    String taskAttemptID = "abcd1234";
     String writerId = WriterRegistry.getWriterId();
     Path path = JobUtils.getTaskWriterOutputFile(jobDetails, taskAttemptID, writerId, "json");
     String pattern =
-        "^" + Pattern.quote(tmp) + "/myproject_mydataset_mytable_task__0000_r_000000_w\\d+\\.json$";
+        "^" + Pattern.quote(tmp) + "/myproject_mydataset_mytable_abcd1234_w\\d+\\.json$";
     assertThat(path.toString(), matchesPattern(pattern));
   }
 }

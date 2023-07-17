@@ -15,13 +15,21 @@
  */
 package com.google.cloud.hive.bigquery.connector;
 
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.TableId;
+import com.google.cloud.bigquery.TableInfo;
+import com.google.cloud.bigquery.connector.common.BigQueryClient;
+import com.google.cloud.bigquery.connector.common.BigQueryClientModule;
 import com.google.cloud.bigquery.connector.common.BigQueryUtil;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
+import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
 import com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat;
 import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
 import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
@@ -144,6 +152,13 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
 
   @Override
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
+    Injector injector =
+        Guice.createInjector(
+            new BigQueryClientModule(),
+            new HiveBigQueryConnectorModule(conf, tableDesc.getProperties()));
+    BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
+    HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
+
     // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
     conf.set(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "true");
 
@@ -152,11 +167,23 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
       conf.set(
           HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryNoJobCommitter.class.getName());
     }
-    JobDetails jobDetails = new JobDetails();
+
     Properties tableProperties = tableDesc.getProperties();
+    TableId tableId =
+        BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY));
+    TableInfo bqTableInfo = bqClient.getTable(tableId);
+    if (bqTableInfo == null) {
+      throw new RuntimeException("BigQuery table does not exist: " + tableId);
+    }
+    Schema bigQuerySchema = bqTableInfo.getDefinition().getSchema();
+
+    // Save the job details file to disk
+    JobDetails jobDetails = new JobDetails();
+    jobDetails.setBigquerySchema(bigQuerySchema);
+    jobDetails.setJobTempOutputPath(
+        new Path(JobUtils.getQueryTempOutputPath(conf, opts), tableDesc.getTableName()));
     jobDetails.setTableProperties(tableProperties);
-    jobDetails.setTableId(
-        BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY)));
+    jobDetails.setTableId(tableId);
     Path jobDetailsFilePath =
         JobUtils.getJobDetailsFilePath(conf, tableProperties.getProperty("name"));
     JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);

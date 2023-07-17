@@ -16,13 +16,9 @@
 package com.google.cloud.hive.bigquery.connector.utils.hive;
 
 import java.util.Map;
-import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Table;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.TaskAttemptID;
-import org.apache.hadoop.mapreduce.JobID;
 
 /**
  * Helper class that looks up details about a task ID and Tez Vertex ID. This is useful to create
@@ -43,7 +39,15 @@ public class HiveUtils {
 
   /** Returns the ID of the Hive query as set by Hive in the configuration. */
   public static String getQueryId(Configuration conf) {
-    return HiveConf.getVar(conf, HiveConf.ConfVars.HIVEQUERYID);
+    String hiveQueryId = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEQUERYID, "");
+    if (!hiveQueryId.equals("")) {
+      return "hive-query-id-" + hiveQueryId;
+    }
+    String sparkAppId = conf.get("spark.app.id", "");
+    if (!sparkAppId.equals("")) {
+      return "spark-app-id-" + sparkAppId;
+    }
+    return "no-query-id";
   }
 
   public static String getDbTableName(org.apache.hadoop.hive.metastore.api.Table table) {
@@ -54,49 +58,5 @@ public class HiveUtils {
     String tezCommitter = conf.get("hive.tez.mapreduce.output.committer.class");
     return (tezCommitter != null
         && tezCommitter.equals("org.apache.tez.mapreduce.committer.MROutputCommitter"));
-  }
-
-  public static TaskAttemptID taskAttemptIDWrapper(JobConf jobConf) {
-    return new TaskAttemptIDWrapper(
-        TaskAttemptID.forName(jobConf.get("mapred.task.id")), jobConf.get("hive.tez.vertex.index"));
-  }
-
-  private static JobID getJobIDWithVertexAppended(JobID jobID, String vertexId) {
-    if (vertexId != null && !vertexId.isEmpty()) {
-      return new JobID(jobID.getJtIdentifier() + vertexId, jobID.getId());
-    } else {
-      return jobID;
-    }
-  }
-
-  private static class TaskAttemptIDWrapper extends TaskAttemptID {
-
-    TaskAttemptIDWrapper(TaskAttemptID taskAttemptID, String vertexId) {
-      super(
-          getJobIDWithVertexAppended(taskAttemptID.getJobID(), vertexId).getJtIdentifier(),
-          taskAttemptID.getJobID().getId(),
-          taskAttemptID.getTaskType(),
-          taskAttemptID.getTaskID().getId(),
-          taskAttemptID.getId());
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
-        return true;
-      }
-      if (!(obj instanceof TaskAttemptIDWrapper)) {
-        return false;
-      }
-      TaskAttemptIDWrapper other = (TaskAttemptIDWrapper) obj;
-      return (getId() == other.getId()
-          && getTaskID().getId() == other.getTaskID().getId()
-          && Objects.equals(getJobID(), other.getJobID()));
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(getId(), getTaskID().getId(), getJobID());
-    }
   }
 }

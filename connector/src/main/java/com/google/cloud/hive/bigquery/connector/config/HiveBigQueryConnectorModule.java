@@ -17,7 +17,6 @@ package com.google.cloud.hive.bigquery.connector.config;
 
 import com.google.cloud.bigquery.connector.common.BigQueryConfig;
 import com.google.cloud.bigquery.connector.common.UserAgentProvider;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -66,6 +65,6 @@ public class HiveBigQueryConnectorModule implements Module {
   @Singleton
   @Provides
   public UserAgentProvider provideUserAgentProvider() {
-    return new HiveBigQueryConnectorUserAgentProvider(HiveUtils.getQueryId(conf));
+    return new HiveBigQueryConnectorUserAgentProvider();
   }
 }

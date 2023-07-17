@@ -25,11 +25,15 @@ import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import com.klarna.hiverunner.HiveShell;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.SparkConf;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -315,5 +319,65 @@ public class TestUtils {
       batch.delete(blob.getBlobId());
     }
     batch.submit();
+  }
+
+  /**
+   * Creates the Metastore derby database on disk instead of in-memory so it can be shared between
+   * Hive and Spark
+   */
+  public static class DerbyDiskDB {
+    public String url;
+    public Path dir;
+
+    public DerbyDiskDB(HiveShell hive) {
+      dir = hive.getBaseDir().resolve("derby_" + UUID.randomUUID());
+      url = String.format("jdbc:derby:%s;create=true", dir);
+      hive.setHiveConfValue("javax.jdo.option.ConnectionURL", url);
+    }
+
+    /**
+     * Deletes the locks on the Derby database so Spark can take it over from Hive (or vice versa).
+     * Otherwise, you'll run into this exception:
+     * "Another instance of Derby may have already booted the database"
+     */
+    public void releaseLock() {
+      try {
+        Files.deleteIfExists(dir.resolve("db.lck"));
+        Files.deleteIfExists(dir.resolve("dbex.lck"));
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  public static SparkSession getSparkSession(DerbyDiskDB derby) {
+    derby.releaseLock();
+    SparkConf sparkConf =
+        new SparkConf()
+            .set("spark.sql.defaultUrlStreamHandlerFactory.enabled", "false")
+            .set("spark.hadoop.javax.jdo.option.ConnectionURL", derby.url)
+            .setMaster("local");
+    SparkSession spark =
+        SparkSession.builder()
+            .appName("example")
+            .config(sparkConf)
+            .enableHiveSupport()
+            .getOrCreate();
+    return spark;
+  }
+
+  /**
+   * Converts the given Spark SQL rows to an array of arrays of primitives for easier comparison in
+   * tests.
+   */
+  public static Object[] simplifySparkRows(Row[] rows) {
+    Object[][] result = new Object[rows.length][];
+    for (int i = 0; i < rows.length; i++) {
+      result[i] = new Object[rows[i].size()];
+      for (int j = 0; j < rows[i].size(); j++) {
+        result[i][j] = rows[i].get(j);
+      }
+    }
+    return result;
   }
 }
