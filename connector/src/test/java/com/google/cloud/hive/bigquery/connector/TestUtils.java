@@ -34,8 +34,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.mutable.WrappedArray;
 
 public class TestUtils {
 
@@ -337,8 +342,8 @@ public class TestUtils {
 
     /**
      * Deletes the locks on the Derby database so Spark can take it over from Hive (or vice versa).
-     * Otherwise, you'll run into this exception:
-     * "Another instance of Derby may have already booted the database"
+     * Otherwise, you'll run into this exception: "Another instance of Derby may have already booted
+     * the database"
      */
     public void releaseLock() {
       try {
@@ -379,5 +384,52 @@ public class TestUtils {
       }
     }
     return result;
+  }
+
+  /** Converts a Spark row to a map of primitives. */
+  public static Map<String, Object> convertSparkRowToMap(GenericRowWithSchema row) {
+    StructType schema = row.schema();
+    String[] fieldNames = schema.fieldNames();
+    Map<String, Object> map = new HashMap<>();
+    for (int i = 0; i < fieldNames.length; i++) {
+      String fieldName = fieldNames[i];
+      DataType fieldType = schema.fields()[i].dataType();
+      Object value = row.get(i);
+      if (value == null) {
+        map.put(fieldName, null);
+      } else if (fieldType instanceof StructType) {
+        map.put(fieldName, convertSparkRowToMap((GenericRowWithSchema) value));
+      } else if (fieldType instanceof ArrayType) {
+        List<Object> list = new ArrayList<>();
+        for (Object element : (Row[]) value) {
+          if (element instanceof GenericRowWithSchema) {
+            list.add(convertSparkRowToMap((GenericRowWithSchema) element));
+          } else {
+            list.add(element);
+          }
+        }
+        map.put(fieldName, list);
+      } else {
+        map.put(fieldName, value);
+      }
+    }
+    return map;
+  }
+
+  /** Converts a Spark array to a simple array of primitives. */
+  public static Object[] convertSparkArray(WrappedArray wrappedArray) {
+    List<Object> list = new ArrayList<>();
+    scala.collection.Iterator iterator = wrappedArray.iterator();
+    while (iterator.hasNext()) {
+      Object value = iterator.next();
+      if (value instanceof GenericRowWithSchema) {
+        list.add(convertSparkRowToMap((GenericRowWithSchema) value));
+      } else if (value instanceof WrappedArray) {
+        list.add(convertSparkArray((WrappedArray) value));
+      } else {
+        list.add(value);
+      }
+    }
+    return list.toArray();
   }
 }

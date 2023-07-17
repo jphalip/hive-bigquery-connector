@@ -23,13 +23,17 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.common.collect.Streams;
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import scala.collection.immutable.Map;
+import scala.collection.mutable.WrappedArray;
 
 public class SparkSQLTests extends IntegrationTestsBase {
 
@@ -44,16 +48,92 @@ public class SparkSQLTests extends IntegrationTestsBase {
         String.format(
             "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", TEST_TABLE_NAME));
     // Read data with Spark SQL
-    SparkSession spark = getSparkSession(derby);
-    Dataset<Row> ds =
-        spark.sql(String.format("SELECT * FROM default.%s WHERE number = 999", TEST_TABLE_NAME));
-    Row[] rows = (Row[]) ds.collect();
-    spark.stop();
+    Row[] rows =
+        runSparkSQLQuery(
+            derby, String.format("SELECT * FROM default.%s WHERE number = 999", TEST_TABLE_NAME));
     assertArrayEquals(
         new Object[] {
           new Object[] {999L, "abcd"},
         },
         simplifySparkRows(rows));
+  }
+
+  // ---------------------------------------------------------------------------------------------------
+
+  /** Check that we can read all types of data from BigQuery. */
+  @ParameterizedTest
+  @MethodSource(READ_FORMAT)
+  public void testReadAllTypes(String readDataFormat) throws IOException {
+    DerbyDiskDB derby = new DerbyDiskDB(hive);
+    initHive(getDefaultExecutionEngine(), readDataFormat);
+    createExternalTable(
+        ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
+    // Insert data into the BQ table using the BQ SDK
+    runBqQuery(
+        String.join(
+            "\n",
+            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
+            "11,",
+            "22,",
+            "33,",
+            "44,",
+            "true,",
+            "\"fixed char\",",
+            "\"var char\",",
+            "\"string\",",
+            "cast(\"2019-03-18\" as date),",
+            // Wall clock (no timezone)
+            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
+            "cast(\"bytes\" as bytes),",
+            "2.0,",
+            "4.2,",
+            "struct(",
+            "  cast(\"-99999999999999999999999999999.999999999\" as numeric),",
+            "  cast(\"99999999999999999999999999999.999999999\" as numeric),",
+            "  cast(3.14 as numeric),",
+            "  cast(\"31415926535897932384626433832.795028841\" as numeric)",
+            "),",
+            "[1, 2, 3],",
+            "[(select as struct 111), (select as struct 222), (select as struct 333)],",
+            "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
+            "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
+                + " 999)])]",
+            ")"));
+    // Read the data using Spark SQL
+    Row[] rows = runSparkSQLQuery(derby, "SELECT * FROM default." + ALL_TYPES_TABLE_NAME);
+    assertEquals(1, rows.length);
+    Row row = rows[0];
+    assertEquals(18, row.size()); // Number of columns
+    assertEquals((byte) 11, row.get(0));
+    assertEquals((short) 22, row.get(1));
+    assertEquals((int) 33, row.get(2));
+    assertEquals((long) 44, row.get(3));
+    assertEquals(true, row.get(4));
+    assertEquals("fixed char", row.get(5));
+    assertEquals("var char", row.get(6));
+    assertEquals("string", row.get(7));
+    assertEquals("2019-03-18", row.get(8).toString());
+    assertEquals("2000-01-01 00:23:45.123456", row.get(9).toString());
+    assertArrayEquals("bytes".getBytes(), (byte[]) row.get(10));
+    assertEquals(2.0, row.getFloat(11));
+    assertEquals(4.2, row.getDouble(12));
+    assertEquals(
+        "{min=-99999999999999999999999999999.999999999, max=99999999999999999999999999999.999999999, pi=3.140000000, big_pi=31415926535897932384626433832.795028841}",
+        convertSparkRowToMap((GenericRowWithSchema) row.get(13)).toString());
+    assertArrayEquals(new Long[] {1l, 2l, 3l}, convertSparkArray((WrappedArray) row.get(14)));
+    assertEquals(
+        "{i=111},{i=222},{i=333}",
+        Arrays.stream(convertSparkArray((WrappedArray) row.get(15)))
+            .map(s -> s.toString())
+            .collect(Collectors.joining(",")));
+    assertEquals(
+        "{float_field=4.2, ts_field=2019-03-18 11:23:45.678901}",
+        convertSparkRowToMap((GenericRowWithSchema) row.get(16)).toString());
+    // Map type
+    Map map = (Map) row.get(17);
+    assertEquals(2, map.size());
+    assertEquals(888, ((Map) map.get("a_key").get()).get("a_subkey").get());
+    assertEquals(999, ((Map) map.get("b_key").get()).get("b_subkey").get());
   }
 
   // ---------------------------------------------------------------------------------------------------
