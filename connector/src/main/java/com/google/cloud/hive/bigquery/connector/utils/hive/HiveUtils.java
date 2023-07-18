@@ -37,6 +37,10 @@ public class HiveUtils {
     return "TRUE".equalsIgnoreCase(params.get("EXTERNAL"));
   }
 
+  public static boolean isSparkJob(Configuration conf) {
+    return conf.get("spark.app.id", "").length() != 0;
+  }
+
   /** Returns the ID of the Hive query as set by Hive in the configuration. */
   public static String getQueryId(Configuration conf) {
     String hiveQueryId = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEQUERYID, "");

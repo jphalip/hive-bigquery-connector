@@ -237,7 +237,7 @@ public class IntegrationTestsBase {
 
   public Row[] runSparkSQLQuery(DerbyDiskDB derby, String queryTemplate) {
     SparkSession spark = getSparkSession(derby);
-    Dataset<Row> ds = spark.sql(String.format(queryTemplate));
+    Dataset<Row> ds = spark.sql(renderQueryTemplate(queryTemplate));
     Row[] rows = (Row[]) ds.collect();
     spark.stop();
     return rows;

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.output;
+package com.google.cloud.hive.bigquery.connector.output.hadoop;
 
 import com.google.cloud.hive.bigquery.connector.JobDetails;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
@@ -31,7 +31,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hadoop.util.Progressable;
 
-public class BigQueryOutputFormat
+/**
+ * Output format compatible with the old "mapred" Hadoop API.
+ */
+public class MapRedOutputFormat
     implements OutputFormat<NullWritable, Writable>, HiveOutputFormat<NullWritable, Writable> {
 
   /**

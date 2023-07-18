@@ -24,8 +24,9 @@ import com.google.cloud.bigquery.connector.common.BigQueryUtil;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
 import com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat;
-import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
-import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat;
+import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputFormat;
+import com.google.cloud.hive.bigquery.connector.output.hadoop.MapReduceOutputFormat;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.inject.Guice;
@@ -76,7 +77,7 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
 
   @Override
   public Class<? extends OutputFormat> getOutputFormatClass() {
-    return BigQueryOutputFormat.class;
+    return MapRedOutputFormat.class;
   }
 
   @Override
@@ -118,32 +119,36 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
   @Override
   public void configureJobConf(TableDesc tableDesc, JobConf jobConf) {
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
-    if (engine.equals("mr")) {
+    if ((engine.equals("tez") && HiveUtils.enableCommitterInTez(conf))) {
+      // This version Hive enables tez committer HIVE-24629
+      conf.set(HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, NoOpCommitter.class.getName());
+    } else if (engine.equals("mr")) {
       if (conf.get(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "false").equals("true")) {
         // Only set the OutputCommitter class if we're dealing with an actual output job,
         // i.e. where data gets written to BigQuery. Otherwise, the "mr" engine will call
         // the OutputCommitter.commitJob() method even for some queries
         // (e.g. "select count(*)") that aren't actually supposed to output data.
         jobConf.set(
-            HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryOutputCommitter.class.getName());
+            HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, MapRedOutputCommitter.class.getName());
       }
     }
-    String hmsDbTableName = tableDesc.getProperties().getProperty("name");
-    String tables = jobConf.get(HiveBigQueryConfig.OUTPUT_TABLES_KEY);
+
+    // Figure out the output table(s)
+    String hmsDbTableName = tableDesc.getTableName();
+    String tables = conf.get(HiveBigQueryConfig.OUTPUT_TABLES_KEY);
     tables =
         tables == null
             ? hmsDbTableName
             : tables + HiveBigQueryConfig.TABLE_NAME_SEPARATOR + hmsDbTableName;
-    jobConf.set(HiveBigQueryConfig.OUTPUT_TABLES_KEY, tables);
-    setGCSAccessTokenProvider(jobConf);
+    conf.set(HiveBigQueryConfig.OUTPUT_TABLES_KEY, tables);
   }
 
   /**
    * Committer with no-op job commit. Set this for Tez so it uses BigQueryMetaHook's
-   * commitInsertTable to commit per table. For task commit/abort and job abort still use
-   * BigQueryOutputCommitter.
+   * commitInsertTable to commit per table. For task commit/abort and job abort still use our
+   * regular OutputCommitter.
    */
-  static class BigQueryNoJobCommitter extends BigQueryOutputCommitter {
+  static class NoOpCommitter extends MapRedOutputCommitter {
     @Override
     public void commitJob(JobContext jobContext) throws IOException {
       // do nothing
@@ -158,17 +163,21 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
             new HiveBigQueryConnectorModule(conf, tableDesc.getProperties()));
     BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
     HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
+    Properties tableProperties = tableDesc.getProperties();
+    String hmsDbTableName = tableDesc.getTableName();
 
     // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
     conf.set(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "true");
-
-    if (HiveUtils.enableCommitterInTez(conf)) {
-      // This version Hive enables tez committer HIVE-24629
-      conf.set(
-          HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryNoJobCommitter.class.getName());
+    
+    // Spark uses the new "mapreduce" Hadoop API for output format
+    if (HiveUtils.isSparkJob(conf)) {
+      conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
     }
 
-    Properties tableProperties = tableDesc.getProperties();
+    // Set config for the GCS Connector
+    setGCSAccessTokenProvider(conf);
+
+    // Retrieve some info from the BQ table
     TableId tableId =
         BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY));
     TableInfo bqTableInfo = bqClient.getTable(tableId);
@@ -181,7 +190,7 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
     JobDetails jobDetails = new JobDetails();
     jobDetails.setBigquerySchema(bigQuerySchema);
     jobDetails.setJobTempOutputPath(
-        new Path(JobUtils.getQueryTempOutputPath(conf, opts), tableDesc.getTableName()));
+        new Path(JobUtils.getQueryTempOutputPath(conf, opts), hmsDbTableName));
     jobDetails.setTableProperties(tableProperties);
     jobDetails.setTableId(tableId);
     Path jobDetailsFilePath =

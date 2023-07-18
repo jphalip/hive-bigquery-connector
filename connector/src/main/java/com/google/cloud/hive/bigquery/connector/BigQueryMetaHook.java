@@ -26,7 +26,8 @@ import com.google.cloud.bigquery.connector.common.BigQueryCredentialsSupplier;
 import com.google.cloud.bigquery.connector.common.BigQueryUtil;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
-import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.hadoop.OutputCommitterUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils.CleanMessage;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
@@ -207,12 +208,6 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
         .put(
             serdeConstants.SERIALIZATION_LIB,
             "com.google.cloud.hive.bigquery.connector.BigQuerySerDe");
-    table
-        .getSd()
-        .setInputFormat("com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat");
-    table
-        .getSd()
-        .setOutputFormat("com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat");
 
     Injector injector =
         Guice.createInjector(
@@ -377,28 +372,25 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
 
   /**
    * This method is called automatically at the end of a successful job when using the "tez"
-   * execution engine. This method is not called when using "mr" -- for that, see {@link
-   * BigQueryOutputCommitter#commitJob(JobContext)}
+   * execution engine. This method is not systematically called when using "mr" -- for that, see
+   * {@link MapRedOutputCommitter#commitJob(JobContext)}
    */
   @Override
   public void commitInsertTable(Table table, boolean overwrite) throws MetaException {
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
-    if (engine.equals("mr")) {
-      // In Hive v3, `commitInsertTable()` never gets called for MR -- only for Tez.
-      // But in Hive v2, it does get called. So we exit here since the BigQueryOutputCommitter
-      // is already called automatically for MR.
-      return;
-    }
-    try {
-      JobDetails jobDetails = JobDetails.readJobDetailsFile(conf, HiveUtils.getDbTableName(table));
-      BigQueryOutputCommitter.commit(conf, jobDetails);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    } finally {
-      // deleteOnExit in case of other jobs using the same workdir
-      JobUtils.cleanNotFail(
-          () -> JobUtils.deleteQueryWorkDirOnExit(conf),
-          CleanMessage.DELETE_QUERY_TEMPORARY_DIRECTORY);
+    if (engine.equals("tez")) {
+      try {
+        JobDetails jobDetails =
+            JobDetails.readJobDetailsFile(conf, HiveUtils.getDbTableName(table));
+        OutputCommitterUtils.commitJob(conf, jobDetails);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      } finally {
+        // deleteOnExit in case of other jobs using the same workdir
+        JobUtils.cleanNotFail(
+            () -> JobUtils.deleteQueryWorkDirOnExit(conf),
+            CleanMessage.DELETE_QUERY_TEMPORARY_DIRECTORY);
+      }
     }
   }
 
