@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.output.hadoop;
+package com.google.cloud.hive.bigquery.connector.output;
 
 import java.io.IOException;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -21,9 +21,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-/**
- * Output format compatible with the new "mapreduce" Hadoop API.
- */
+/** Output format compatible with the new "mapreduce" Hadoop API. This is used by Spark SQL. */
 public class MapReduceOutputFormat<T> extends FileOutputFormat<Void, T> {
 
   private MapReduceOutputCommitter committer;
@@ -40,7 +38,7 @@ public class MapReduceOutputFormat<T> extends FileOutputFormat<Void, T> {
   @Override
   public RecordWriter<Void, T> getRecordWriter(TaskAttemptContext taskAttemptContext)
       throws IOException, InterruptedException {
-    // Note: Spark and Hive use MapRedOutputFormat's getRecordWriter() instead.
+    // Note: Spark and Hive use `BigQueryOutputFormat.getRecordWriter()` instead.
     return null;
   }
 }

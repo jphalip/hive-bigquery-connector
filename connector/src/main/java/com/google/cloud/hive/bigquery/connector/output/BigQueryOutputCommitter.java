@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.output.hadoop;
+package com.google.cloud.hive.bigquery.connector.output;
 
 import com.google.cloud.hive.bigquery.connector.JobDetails;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
@@ -26,11 +26,9 @@ import org.apache.hadoop.mapred.TaskAttemptContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Output committer compatible with the old "mapred" Hadoop API.
- */
-public class MapRedOutputCommitter extends OutputCommitter {
-  private static final Logger LOG = LoggerFactory.getLogger(MapRedOutputCommitter.class);
+/** Output committer compatible with the old "mapred" Hadoop API. */
+public class BigQueryOutputCommitter extends OutputCommitter {
+  private static final Logger LOG = LoggerFactory.getLogger(BigQueryOutputCommitter.class);
 
   @Override
   public void commitJob(JobContext jobContext) throws IOException {
@@ -56,7 +54,7 @@ public class MapRedOutputCommitter extends OutputCommitter {
 
   @Override
   public void abortJob(JobContext jobContext, int status) throws IOException {
-    OutputCommitterUtils.abortJob(jobContext.getJobConf(), jobContext.getJobID().toString());
+    OutputCommitterUtils.abortJob(jobContext.getJobConf());
     super.abortJob(jobContext, status);
   }
 

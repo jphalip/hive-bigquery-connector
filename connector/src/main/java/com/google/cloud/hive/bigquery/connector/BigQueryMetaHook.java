@@ -26,8 +26,8 @@ import com.google.cloud.bigquery.connector.common.BigQueryCredentialsSupplier;
 import com.google.cloud.bigquery.connector.common.BigQueryUtil;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
-import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputCommitter;
-import com.google.cloud.hive.bigquery.connector.output.hadoop.OutputCommitterUtils;
+import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.OutputCommitterUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils.CleanMessage;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
@@ -208,6 +208,12 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
         .put(
             serdeConstants.SERIALIZATION_LIB,
             "com.google.cloud.hive.bigquery.connector.BigQuerySerDe");
+    table
+        .getSd()
+        .setInputFormat("com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat");
+    table
+        .getSd()
+        .setOutputFormat("com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat");
 
     Injector injector =
         Guice.createInjector(
@@ -373,7 +379,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
   /**
    * This method is called automatically at the end of a successful job when using the "tez"
    * execution engine. This method is not systematically called when using "mr" -- for that, see
-   * {@link MapRedOutputCommitter#commitJob(JobContext)}
+   * {@link BigQueryOutputCommitter#commitJob(JobContext)}
    */
   @Override
   public void commitInsertTable(Table table, boolean overwrite) throws MetaException {

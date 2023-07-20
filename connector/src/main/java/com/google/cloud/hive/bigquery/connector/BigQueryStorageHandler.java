@@ -24,9 +24,9 @@ import com.google.cloud.bigquery.connector.common.BigQueryUtil;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
 import com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat;
-import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputCommitter;
-import com.google.cloud.hive.bigquery.connector.output.hadoop.MapRedOutputFormat;
-import com.google.cloud.hive.bigquery.connector.output.hadoop.MapReduceOutputFormat;
+import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat;
+import com.google.cloud.hive.bigquery.connector.output.MapReduceOutputFormat;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.inject.Guice;
@@ -77,7 +77,7 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
 
   @Override
   public Class<? extends OutputFormat> getOutputFormatClass() {
-    return MapRedOutputFormat.class;
+    return BigQueryOutputFormat.class;
   }
 
   @Override
@@ -129,10 +129,13 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
         // the OutputCommitter.commitJob() method even for some queries
         // (e.g. "select count(*)") that aren't actually supposed to output data.
         jobConf.set(
-            HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, MapRedOutputCommitter.class.getName());
+            HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryOutputCommitter.class.getName());
       }
     }
+    setOutputTables(tableDesc);
+  }
 
+  protected void setOutputTables(TableDesc tableDesc) {
     // Figure out the output table(s)
     String hmsDbTableName = tableDesc.getTableName();
     String tables = conf.get(HiveBigQueryConfig.OUTPUT_TABLES_KEY);
@@ -148,7 +151,7 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
    * commitInsertTable to commit per table. For task commit/abort and job abort still use our
    * regular OutputCommitter.
    */
-  static class NoOpCommitter extends MapRedOutputCommitter {
+  static class NoOpCommitter extends BigQueryOutputCommitter {
     @Override
     public void commitJob(JobContext jobContext) throws IOException {
       // do nothing
@@ -168,10 +171,12 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
 
     // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
     conf.set(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "true");
-    
-    // Spark uses the new "mapreduce" Hadoop API for output format
+
     if (HiveUtils.isSparkJob(conf)) {
+      // Spark uses the new "mapreduce" Hadoop API for the job output format
       conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
+      tableDesc.setOutputFileFormatClass(BigQueryOutputFormat.class);
+      setOutputTables(tableDesc);
     }
 
     // Set config for the GCS Connector
