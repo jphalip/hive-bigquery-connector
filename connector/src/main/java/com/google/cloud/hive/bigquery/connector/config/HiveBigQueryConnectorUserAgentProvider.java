@@ -22,6 +22,6 @@ public class HiveBigQueryConnectorUserAgentProvider implements UserAgentProvider
 
   @Override
   public String getUserAgent() {
-    return "hive-bigQuery-connector/" + BuildProperties.CONNECTOR_VERSION;
+    return "hive-bigquery-connector/" + BuildProperties.CONNECTOR_VERSION;
   }
 }
