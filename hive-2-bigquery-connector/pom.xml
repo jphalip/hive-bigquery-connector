@@ -1,0 +1,39 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.google.cloud.hive</groupId>
+        <artifactId>hive-bigquery-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>../hive-bigquery-parent</relativePath>
+    </parent>
+    <artifactId>hive-2-bigquery-connector</artifactId>
+    <name>Hive-BigQuery Connector For Hive 2</name>
+    <version>${revision}</version>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.cloud.hive</groupId>
+            <artifactId>hive-bigquery-connector-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>shaded-dependencies</artifactId>
+            <version>${project.parent.version}</version>
+            <classifier>shaded</classifier>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>

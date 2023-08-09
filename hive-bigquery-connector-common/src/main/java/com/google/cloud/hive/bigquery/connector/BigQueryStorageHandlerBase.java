@@ -55,7 +55,7 @@ import org.apache.hadoop.mapred.OutputFormat;
 
 /** Main entrypoint for Hive/BigQuery interactions. */
 @SuppressWarnings({"rawtypes", "deprecated"})
-public class BigQueryStorageHandler implements HiveStoragePredicateHandler, HiveStorageHandler {
+public abstract class BigQueryStorageHandlerBase implements HiveStoragePredicateHandler, HiveStorageHandler {
 
   Configuration conf;
 
@@ -213,24 +213,4 @@ public class BigQueryStorageHandler implements HiveStoragePredicateHandler, Hive
     // Deprecated
   }
 
-  // TODO: Figure out if stats can be enabled for Hive v2
-  //  /*
-  //  The following API may not be available in Hive-3, check running Hive if they are available.
-  //  */
-  //  // @Override
-  //  public boolean canProvideBasicStatistics() {
-  //    return true;
-  //  }
-  //
-  //  // @Override
-  //  public Map<String, String> getBasicStatistics(Partish partish) {
-  //    org.apache.hadoop.hive.ql.metadata.Table hmsTable = partish.getTable();
-  //    Injector injector =
-  //        Guice.createInjector(
-  //            new BigQueryClientModule(),
-  //            new HiveBigQueryConnectorModule(conf, hmsTable.getParameters()));
-  //    BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
-  //    HiveBigQueryConfig config = injector.getInstance(HiveBigQueryConfig.class);
-  //    return BigQueryUtils.getBasicStatistics(bqClient, config.getTableId());
-  //  }
 }
