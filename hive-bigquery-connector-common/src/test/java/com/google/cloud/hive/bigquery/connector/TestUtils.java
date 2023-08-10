@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hive.common.util.HiveVersionInfo;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -84,7 +85,6 @@ public class TestUtils {
           "var_char STRING OPTIONS (description = 'A description for a VARCHAR'),",
           "str STRING OPTIONS (description = 'A description for a STRING'),",
           "day DATE OPTIONS (description = 'A description for a DATE'),",
-          "ts DATETIME OPTIONS (description = 'A description for a TIMESTAMP'),",
           "bin BYTES OPTIONS (description = 'A description for a BINARY'),",
           "fl FLOAT64 OPTIONS (description = 'A description for a FLOAT'),",
           "dbl FLOAT64 OPTIONS (description = 'A description for a DOUBLE'),",
@@ -96,7 +96,15 @@ public class TestUtils {
           "mixed_struct STRUCT<float_field FLOAT64, ts_field DATETIME> OPTIONS (description = 'A"
               + " description for a STRUCT-MIXED'),",
           "mp ARRAY<STRUCT<key STRING, value ARRAY<STRUCT<key STRING, value INT64>>>> OPTIONS"
-              + " (description = 'A description for a MAP')");
+              + " (description = 'A description for a MAP'),",
+          "ts DATETIME OPTIONS (description = 'A description for a TIMESTAMP')"
+      );
+
+  public static String BIGQUERY_ALL_TYPES_WITH_TZ_TABLE_DDL =
+      String.join(
+          "\n",
+          BIGQUERY_ALL_TYPES_TABLE_DDL + ",",
+          "tstz TIMESTAMP OPTIONS (description = 'A description for a TIMESTAMPLOCALTZ')");
 
   public static String BIGQUERY_BIGLAKE_TABLE_CREATE_QUERY =
       String.join(
@@ -130,7 +138,6 @@ public class TestUtils {
           "var_char VARCHAR(10) COMMENT 'A description for a VARCHAR',",
           "str STRING COMMENT 'A description for a STRING',",
           "day DATE COMMENT 'A description for a DATE',",
-          "ts TIMESTAMP COMMENT 'A description for a TIMESTAMP',",
           "bin BINARY COMMENT 'A description for a BINARY',",
           "fl FLOAT COMMENT 'A description for a FLOAT',",
           "dbl DOUBLE COMMENT 'A description for a DOUBLE',",
@@ -140,7 +147,14 @@ public class TestUtils {
           "int_struct_arr ARRAY<STRUCT<i: BIGINT>> COMMENT 'A description for a ARRAY-STRUCT',",
           "mixed_struct STRUCT<float_field:FLOAT,ts_field:TIMESTAMP> COMMENT 'A description for a"
               + " STRUCT-MIXED',",
-          "mp MAP<STRING,MAP<STRING,INT>> COMMENT 'A description for a MAP'");
+          "mp MAP<STRING,MAP<STRING,INT>> COMMENT 'A description for a MAP',",
+          "ts TIMESTAMP COMMENT 'A description for a TIMESTAMP'");
+
+  public static String HIVE_ALL_TYPES_WITH_TZ_TABLE_DDL =String.join(
+      "\n",
+      HIVE_ALL_TYPES_TABLE_DDL + ",",
+      "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'"
+      );
 
   public static String HIVE_FIELD_TIME_PARTITIONED_TABLE_DDL =
       String.join("\n", "int_val BIGINT,", "ts TIMESTAMP");
@@ -156,6 +170,14 @@ public class TestUtils {
   public static String HIVE_INGESTION_TIME_PARTITIONED_DDL = String.join("\n", "int_val BIGINT");
 
   public static String HIVE_INGESTION_TIME_PARTITIONED_PROPS = "'bq.time.partition.type'='DAY'";
+
+  public static boolean isHive2() {
+    return HiveVersionInfo.getVersion().startsWith("2.");
+  }
+
+  public static boolean isHive3() {
+    return HiveVersionInfo.getVersion().startsWith("3.");
+  }
 
   /** Return Hive config values passed from system properties */
   public static Map<String, String> getHiveConfSystemOverrides() {

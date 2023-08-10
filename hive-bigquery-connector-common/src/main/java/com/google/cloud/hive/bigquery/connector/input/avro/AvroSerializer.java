@@ -31,12 +31,11 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
+import org.apache.hadoop.hive.common.type.TimestampTZ;
+import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
-import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.io.ShortWritable;
-import org.apache.hadoop.hive.serde2.io.TimestampWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.*;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.*;
 import org.apache.hadoop.io.*;
@@ -108,6 +107,12 @@ public class AvroSerializer {
       timestampWritable.setInternal(timestamp.getTime(), timestamp.getNanos());
       return timestampWritable;
     }
+
+    if (objectInspector instanceof TimestampLocalTZObjectInspector) {
+      TimestampTZ timestampTZ = DateTimeUtils.getHiveTimestampTZFromUTC((long) avroObject);
+      return new TimestampLocalTZWritable(timestampTZ);
+    }
+
 
     if (objectInspector instanceof ByteObjectInspector) { // Tiny Int
       return new ByteWritable(((Long) avroObject).byteValue());

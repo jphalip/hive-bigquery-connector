@@ -16,6 +16,8 @@
 package com.google.cloud.hive.bigquery.connector.utils;
 
 import com.google.cloud.bigquery.storage.v1beta2.CivilTimeEncoder;
+import org.apache.hadoop.hive.common.type.TimestampTZ;
+
 import java.sql.Timestamp;
 import java.time.*;
 
@@ -37,6 +39,18 @@ public class DateTimeUtils {
             localDateTime.getMinute(),
             localDateTime.getSecond(),
             localDateTime.getNano()));
+  }
+
+  public static TimestampTZ getHiveTimestampTZFromUTC(long utc) {
+    long seconds = utc / 1_000_000;
+    int nanos = (int) (utc % 1_000_000) * 1_000;
+    ZonedDateTime zonedDateTime = Instant.ofEpochSecond(seconds, nanos).atZone(ZoneId.of("UTC"));
+    return new TimestampTZ(zonedDateTime);
+  }
+
+  public static long getEpochMicrosFromHiveTimestampTZ(TimestampTZ timestampTZ) {
+    return timestampTZ.getZonedDateTime().toEpochSecond() * 1_000_000
+        + timestampTZ.getZonedDateTime().getNano() / 1_000;
   }
 
   public static Timestamp getHiveTimestampFromLocalDatetime(LocalDateTime localDateTime) {

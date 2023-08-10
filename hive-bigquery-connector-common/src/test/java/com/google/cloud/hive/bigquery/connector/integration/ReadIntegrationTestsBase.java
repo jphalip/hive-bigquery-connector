@@ -20,8 +20,12 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.bigquery.TableResult;
+import com.google.cloud.hive.bigquery.connector.EnabledIfHive2;
+import com.google.cloud.hive.bigquery.connector.EnabledIfHive3;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -30,7 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class ReadIntegrationTests extends IntegrationTestsBase {
+public class ReadIntegrationTestsBase extends IntegrationTestsBase {
 
   /**
    * Check that attempting to read a table that doesn't exist fails gracefully with a useful error
@@ -334,48 +338,49 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
   // ---------------------------------------------------------------------------------------------------
 
   /** Check that we can read all types of data from BigQuery. */
-  @ParameterizedTest
-  @MethodSource(READ_FORMAT)
-  public void testReadAllTypes(String readDataFormat) throws IOException {
+  public Object[] restReadAllTypes(String readDataFormat, String additionalCol) throws IOException {
     initHive(getDefaultExecutionEngine(), readDataFormat);
     createExternalTable(
         ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using the BQ SDK
-    runBqQuery(
-        String.join(
-            "\n",
-            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
-            "11,",
-            "22,",
-            "33,",
-            "44,",
-            "true,",
-            "\"fixed char\",",
-            "\"var char\",",
-            "\"string\",",
-            "cast(\"2019-03-18\" as date),",
-            // Wall clock (no timezone)
-            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
-            "cast(\"bytes\" as bytes),",
-            "2.0,",
-            "4.2,",
-            "struct(",
-            "  cast(\"-99999999999999999999999999999.999999999\" as numeric),",
-            "  cast(\"99999999999999999999999999999.999999999\" as numeric),",
-            "  cast(3.14 as numeric),",
-            "  cast(\"31415926535897932384626433832.795028841\" as numeric)",
-            "),",
-            "[1, 2, 3],",
-            "[(select as struct 111), (select as struct 222), (select as struct 333)],",
-            "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
-            "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
-                + " 999)])]",
-            ")"));
+    String query = String.join(
+        "\n",
+        String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
+        "11,",
+        "22,",
+        "33,",
+        "44,",
+        "true,",
+        "\"fixed char\",",
+        "\"var char\",",
+        "\"string\",",
+        "cast(\"2019-03-18\" as date),",
+        "cast(\"bytes\" as bytes),",
+        "2.0,",
+        "4.2,",
+        "struct(",
+        "  cast(\"-99999999999999999999999999999.999999999\" as numeric),",
+        "  cast(\"99999999999999999999999999999.999999999\" as numeric),",
+        "  cast(3.14 as numeric),",
+        "  cast(\"31415926535897932384626433832.795028841\" as numeric)",
+        "),",
+        "[1, 2, 3],",
+        "[(select as struct 111), (select as struct 222), (select as struct 333)],",
+        "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
+        "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
+            + " 999)])],",
+        // Wall clock (no timezone)
+        "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
+        ")");
+    if (additionalCol != null) {
+      query += ",\n" + additionalCol;
+    }
+    runBqQuery(query);
     // Read the data using Hive
     List<Object[]> rows = runHiveQuery("SELECT * FROM " + ALL_TYPES_TABLE_NAME);
     assertEquals(1, rows.size());
     Object[] row = rows.get(0);
-    assertEquals(18, row.length); // Number of columns
+    assertEquals(additionalCol == null ? 18 : 19, row.length); // Number of columns
     assertEquals((byte) 11, row[0]);
     assertEquals((short) 22, row[1]);
     assertEquals((int) 33, row[2]);
@@ -385,21 +390,20 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
     assertEquals("var char", row[6]);
     assertEquals("string", row[7]);
     assertEquals("2019-03-18", row[8]);
-    assertEquals("2000-01-01 00:23:45.123456", row[9]);
-    assertArrayEquals("bytes".getBytes(), (byte[]) row[10]);
-    assertEquals(2.0, row[11]);
-    assertEquals(4.2, row[12]);
+    assertArrayEquals("bytes".getBytes(), (byte[]) row[9]);
+    assertEquals(2.0, row[10]);
+    assertEquals(4.2, row[11]);
     assertEquals(
         "{\"min\":-99999999999999999999999999999.999999999,\"max\":99999999999999999999999999999.999999999,\"pi\":3.14,\"big_pi\":31415926535897932384626433832.795028841}",
-        row[13]);
-    assertEquals("[1,2,3]", row[14]);
-    assertEquals("[{\"i\":111},{\"i\":222},{\"i\":333}]", row[15]);
-    assertEquals("{\"float_field\":4.2,\"ts_field\":\"2019-03-18 11:23:45.678901\"}", row[16]);
+        row[12]);
+    assertEquals("[1,2,3]", row[13]);
+    assertEquals("[{\"i\":111},{\"i\":222},{\"i\":333}]", row[14]);
+    assertEquals("{\"float_field\":4.2,\"ts_field\":\"2019-03-18 11:23:45.678901\"}", row[15]);
     // Map type
     ObjectMapper mapper = new ObjectMapper();
     TypeReference<HashMap<String, HashMap<String, Integer>>> typeRef =
         new TypeReference<HashMap<String, HashMap<String, Integer>>>() {};
-    HashMap<String, HashMap<String, Integer>> map = mapper.readValue(row[17].toString(), typeRef);
+    HashMap<String, HashMap<String, Integer>> map = mapper.readValue(row[16].toString(), typeRef);
     assertEquals(2, map.size());
     assertEquals(
         new HashMap() {
@@ -415,6 +419,30 @@ public class ReadIntegrationTests extends IntegrationTestsBase {
           }
         },
         map.get("b_key"));
+    assertEquals("2000-01-01 00:23:45.123456", row[17]);
+    return row;
+  }
+
+  @ParameterizedTest
+  @MethodSource(READ_FORMAT)
+  @EnabledIfHive2
+  public void testReadAllTypesHive2(String readDataFormat) throws IOException {
+    restReadAllTypes(readDataFormat, null);
+  }
+
+  @ParameterizedTest
+  @MethodSource(READ_FORMAT)
+  @EnabledIfHive3
+  public void testReadAllTypesHive3(String readDataFormat) throws IOException {
+    // (Pacific/Honolulu, -10:00)
+    String additionalCol = "cast(\"2000-01-01T00:23:45.123456-10\" as timestamp)";
+    Object[] row = restReadAllTypes(readDataFormat, additionalCol);
+    assertEquals(
+        "2000-01-01T10:23:45.123456Z", // 'Z' == UTC
+        Instant.from(
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS VV")
+                    .parse(row[18].toString()))
+            .toString());
   }
 
   // ---------------------------------------------------------------------------------------------------
