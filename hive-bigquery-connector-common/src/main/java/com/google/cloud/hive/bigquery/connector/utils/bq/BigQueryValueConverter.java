@@ -16,9 +16,8 @@
 package com.google.cloud.hive.bigquery.connector.utils.bq;
 
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
-import com.google.cloud.hive.bigquery.connector.utils.DateTimeUtils;
+import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
 import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
@@ -74,29 +73,10 @@ public class BigQueryValueConverter {
       return new Long(writable.get());
     }
 
-    if (objectInspector instanceof TimestampObjectInspector) {
-      TimestampWritable writable;
-      if (hiveValue instanceof LazyTimestamp) {
-        writable = ((LazyTimestamp) hiveValue).getWritableObject();
-      } else {
-        writable = (TimestampWritable) hiveValue;
-      }
-      Timestamp timestamp = writable.getTimestamp();
-      if (writeMethod.equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
-        return DateTimeUtils.getEpochMicrosFromHiveTimestamp(timestamp);
-      } else {
-        return DateTimeUtils.getEncodedProtoLongFromHiveTimestamp(timestamp);
-      }
-    }
-
-    if (objectInspector instanceof DateObjectInspector) {
-      DateWritable writable;
-      if (hiveValue instanceof LazyDate) {
-        writable = ((LazyDate) hiveValue).getWritableObject();
-      } else {
-        writable = (DateWritable) hiveValue;
-      }
-      return new Integer(writable.getDays());
+    Object converted =
+        HiveUtils.getHiveCompat().convertHiveTimeUnitToBq(objectInspector, hiveValue, writeMethod);
+    if (converted != null) {
+      return converted;
     }
 
     if (objectInspector instanceof FloatObjectInspector) {

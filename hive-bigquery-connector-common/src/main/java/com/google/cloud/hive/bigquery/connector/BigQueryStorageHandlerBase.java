@@ -37,7 +37,6 @@ import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
@@ -55,7 +54,8 @@ import org.apache.hadoop.mapred.OutputFormat;
 
 /** Main entrypoint for Hive/BigQuery interactions. */
 @SuppressWarnings({"rawtypes", "deprecated"})
-public abstract class BigQueryStorageHandlerBase implements HiveStoragePredicateHandler, HiveStorageHandler {
+public abstract class BigQueryStorageHandlerBase
+    implements HiveStoragePredicateHandler, HiveStorageHandler {
 
   Configuration conf;
 
@@ -83,11 +83,6 @@ public abstract class BigQueryStorageHandlerBase implements HiveStoragePredicate
   @Override
   public Class<? extends AbstractSerDe> getSerDeClass() {
     return BigQuerySerDe.class;
-  }
-
-  @Override
-  public HiveMetaHook getMetaHook() {
-    return new BigQueryMetaHook(conf);
   }
 
   @Override
@@ -212,5 +207,4 @@ public abstract class BigQueryStorageHandlerBase implements HiveStoragePredicate
   public void configureTableJobProperties(TableDesc tableDesc, Map<String, String> map) {
     // Deprecated
   }
-
 }

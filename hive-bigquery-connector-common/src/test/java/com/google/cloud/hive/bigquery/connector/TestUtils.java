@@ -25,23 +25,11 @@ import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.klarna.hiverunner.HiveShell;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hive.common.util.HiveVersionInfo;
-import org.apache.spark.SparkConf;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.types.ArrayType;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.StructType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.mutable.WrappedArray;
 
 public class TestUtils {
 
@@ -97,8 +85,7 @@ public class TestUtils {
               + " description for a STRUCT-MIXED'),",
           "mp ARRAY<STRUCT<key STRING, value ARRAY<STRUCT<key STRING, value INT64>>>> OPTIONS"
               + " (description = 'A description for a MAP'),",
-          "ts DATETIME OPTIONS (description = 'A description for a TIMESTAMP')"
-      );
+          "ts DATETIME OPTIONS (description = 'A description for a TIMESTAMP')");
 
   public static String BIGQUERY_ALL_TYPES_WITH_TZ_TABLE_DDL =
       String.join(
@@ -150,11 +137,11 @@ public class TestUtils {
           "mp MAP<STRING,MAP<STRING,INT>> COMMENT 'A description for a MAP',",
           "ts TIMESTAMP COMMENT 'A description for a TIMESTAMP'");
 
-  public static String HIVE_ALL_TYPES_WITH_TZ_TABLE_DDL =String.join(
-      "\n",
-      HIVE_ALL_TYPES_TABLE_DDL + ",",
-      "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'"
-      );
+  public static String HIVE_ALL_TYPES_WITH_TZ_TABLE_DDL =
+      String.join(
+          "\n",
+          HIVE_ALL_TYPES_TABLE_DDL + ",",
+          "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'");
 
   public static String HIVE_FIELD_TIME_PARTITIONED_TABLE_DDL =
       String.join("\n", "int_val BIGINT,", "ts TIMESTAMP");
@@ -346,112 +333,5 @@ public class TestUtils {
       batch.delete(blob.getBlobId());
     }
     batch.submit();
-  }
-
-  /**
-   * Creates the Metastore derby database on disk instead of in-memory so it can be shared between
-   * Hive and Spark
-   */
-  public static class DerbyDiskDB {
-    public String url;
-    public Path dir;
-
-    public DerbyDiskDB(HiveShell hive) {
-      dir = hive.getBaseDir().resolve("derby_" + UUID.randomUUID());
-      url = String.format("jdbc:derby:%s;create=true", dir);
-      hive.setHiveConfValue("javax.jdo.option.ConnectionURL", url);
-    }
-
-    /**
-     * Deletes the locks on the Derby database so Spark can take it over from Hive (or vice versa).
-     * Otherwise, you'll run into this exception: "Another instance of Derby may have already booted
-     * the database"
-     */
-    public void releaseLock() {
-      try {
-        Files.deleteIfExists(dir.resolve("db.lck"));
-        Files.deleteIfExists(dir.resolve("dbex.lck"));
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  public static SparkSession getSparkSession(DerbyDiskDB derby) {
-    derby.releaseLock();
-    SparkConf sparkConf =
-        new SparkConf()
-            .set("spark.sql.defaultUrlStreamHandlerFactory.enabled", "false")
-            .set("spark.hadoop.javax.jdo.option.ConnectionURL", derby.url)
-            .setMaster("local");
-    SparkSession spark =
-        SparkSession.builder()
-            .appName("example")
-            .config(sparkConf)
-            .enableHiveSupport()
-            .getOrCreate();
-    return spark;
-  }
-
-  /**
-   * Converts the given Spark SQL rows to an array of arrays of primitives for easier comparison in
-   * tests.
-   */
-  public static Object[] simplifySparkRows(Row[] rows) {
-    Object[][] result = new Object[rows.length][];
-    for (int i = 0; i < rows.length; i++) {
-      result[i] = new Object[rows[i].size()];
-      for (int j = 0; j < rows[i].size(); j++) {
-        result[i][j] = rows[i].get(j);
-      }
-    }
-    return result;
-  }
-
-  /** Converts a Spark row to a map of primitives. */
-  public static Map<String, Object> convertSparkRowToMap(GenericRowWithSchema row) {
-    StructType schema = row.schema();
-    String[] fieldNames = schema.fieldNames();
-    Map<String, Object> map = new HashMap<>();
-    for (int i = 0; i < fieldNames.length; i++) {
-      String fieldName = fieldNames[i];
-      DataType fieldType = schema.fields()[i].dataType();
-      Object value = row.get(i);
-      if (value == null) {
-        map.put(fieldName, null);
-      } else if (fieldType instanceof StructType) {
-        map.put(fieldName, convertSparkRowToMap((GenericRowWithSchema) value));
-      } else if (fieldType instanceof ArrayType) {
-        List<Object> list = new ArrayList<>();
-        for (Object element : (Row[]) value) {
-          if (element instanceof GenericRowWithSchema) {
-            list.add(convertSparkRowToMap((GenericRowWithSchema) element));
-          } else {
-            list.add(element);
-          }
-        }
-        map.put(fieldName, list);
-      } else {
-        map.put(fieldName, value);
-      }
-    }
-    return map;
-  }
-
-  /** Converts a Spark array to a simple array of primitives. */
-  public static Object[] convertSparkArray(WrappedArray wrappedArray) {
-    List<Object> list = new ArrayList<>();
-    scala.collection.Iterator iterator = wrappedArray.iterator();
-    while (iterator.hasNext()) {
-      Object value = iterator.next();
-      if (value instanceof GenericRowWithSchema) {
-        list.add(convertSparkRowToMap((GenericRowWithSchema) value));
-      } else if (value instanceof WrappedArray) {
-        list.add(convertSparkArray((WrappedArray) value));
-      } else {
-        list.add(value);
-      }
-    }
-    return list.toArray();
   }
 }

@@ -343,35 +343,36 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
     createExternalTable(
         ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using the BQ SDK
-    String query = String.join(
-        "\n",
-        String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
-        "11,",
-        "22,",
-        "33,",
-        "44,",
-        "true,",
-        "\"fixed char\",",
-        "\"var char\",",
-        "\"string\",",
-        "cast(\"2019-03-18\" as date),",
-        "cast(\"bytes\" as bytes),",
-        "2.0,",
-        "4.2,",
-        "struct(",
-        "  cast(\"-99999999999999999999999999999.999999999\" as numeric),",
-        "  cast(\"99999999999999999999999999999.999999999\" as numeric),",
-        "  cast(3.14 as numeric),",
-        "  cast(\"31415926535897932384626433832.795028841\" as numeric)",
-        "),",
-        "[1, 2, 3],",
-        "[(select as struct 111), (select as struct 222), (select as struct 333)],",
-        "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
-        "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
-            + " 999)])],",
-        // Wall clock (no timezone)
-        "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
-        ")");
+    String query =
+        String.join(
+            "\n",
+            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
+            "11,",
+            "22,",
+            "33,",
+            "44,",
+            "true,",
+            "\"fixed char\",",
+            "\"var char\",",
+            "\"string\",",
+            "cast(\"2019-03-18\" as date),",
+            "cast(\"bytes\" as bytes),",
+            "2.0,",
+            "4.2,",
+            "struct(",
+            "  cast(\"-99999999999999999999999999999.999999999\" as numeric),",
+            "  cast(\"99999999999999999999999999999.999999999\" as numeric),",
+            "  cast(3.14 as numeric),",
+            "  cast(\"31415926535897932384626433832.795028841\" as numeric)",
+            "),",
+            "[1, 2, 3],",
+            "[(select as struct 111), (select as struct 222), (select as struct 333)],",
+            "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
+            "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
+                + " 999)])],",
+            // Wall clock (no timezone)
+            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
+            ")");
     if (additionalCol != null) {
       query += ",\n" + additionalCol;
     }

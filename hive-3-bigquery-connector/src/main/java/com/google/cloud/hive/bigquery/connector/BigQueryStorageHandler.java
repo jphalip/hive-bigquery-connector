@@ -9,9 +9,30 @@ import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModu
 import com.google.cloud.hive.bigquery.connector.utils.bq.BigQueryUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.hadoop.hive.metastore.HiveMetaHook;
+import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.ql.stats.Partish;
 
 public class BigQueryStorageHandler extends BigQueryStorageHandlerBase {
+
+  @Override
+  public HiveMetaHook getMetaHook() {
+    return new BigQueryMetaHook(conf);
+  }
+
+
+  @Override
+  public void configureInputJobCredentials(TableDesc tableDesc, Map<String, String> map) {
+    // Do nothing
+  }
+
+  /*
+  The following API may not be available in Hive-3, check running Hive if they are available.
+  */
+  // @Override
+  public boolean canProvideBasicStatistics() {
+    return true;
+  }
 
   // @Override
   public Map<String, String> getBasicStatistics(Partish partish) {

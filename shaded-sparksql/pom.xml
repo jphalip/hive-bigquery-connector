@@ -25,7 +25,7 @@
     <relativePath>../hive-bigquery-parent</relativePath>
   </parent>
 
-  <artifactId>shaded-test-dependencies</artifactId>
+  <artifactId>shaded-sparksql</artifactId>
 
   <licenses>
       <license>
@@ -46,11 +46,43 @@
 
   <dependencies>
 
-    <!-- Needed for acceptance tests -->
+    <!-- Needed for Spark SQL -->
     <dependency>
-      <groupId>com.google.cloud</groupId>
-      <artifactId>google-cloud-dataproc</artifactId>
-      <version>${google-cloud-dataproc.version}</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.9</version>
+    </dependency>
+
+    <!-- Needed for Spark SQL -->
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>janino</artifactId>
+      <version>3.1.10</version>
+    </dependency>
+
+    <!-- Needed for Spark SQL -->
+    <dependency>
+      <groupId>org.codehaus.janino</groupId>
+      <artifactId>commons-compiler</artifactId>
+      <version>3.1.10</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.12</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_2.12</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-hive_2.12</artifactId>
+      <version>${spark.version}</version>
     </dependency>
 
   </dependencies>
@@ -86,19 +118,13 @@
               </filters>
               <relocations>
                 <relocation>
-                  <pattern>com</pattern>
-                  <shadedPattern>test.hivebqcon.com</shadedPattern>
+                  <pattern>org</pattern>
+                  <shadedPattern>test.hivebqcon.org</shadedPattern>
                   <includes>
-                    <include>com.google.**</include>
-                  </includes>
-                </relocation>
-                <relocation>
-                  <pattern>io</pattern>
-                  <shadedPattern>test.hivebqcon.io</shadedPattern>
-                  <includes>
-                    <include>io.netty.**</include>
-                    <include>io.grpc.**</include>
-                    <include>io.opencensus.**</include>
+                    <!-- Shading needed for Spark SQL: -->
+                    <include>org.apache.commons.**</include>
+                    <include>org.codehaus.janino.**</include>
+                    <include>org.codehaus.commons.**</include>
                   </includes>
                 </relocation>
               </relocations>

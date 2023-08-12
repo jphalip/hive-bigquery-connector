@@ -16,7 +16,6 @@
 package com.google.cloud.hive.bigquery.connector.integration;
 
 import static com.google.cloud.hive.bigquery.connector.TestUtils.HIVE_ALL_TYPES_TABLE_DDL;
-import static com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 

@@ -36,9 +36,6 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
 import org.apache.tez.mapreduce.hadoop.MRJobConfig;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -233,14 +230,6 @@ public class IntegrationTestsBase {
       cleanedTemplate = StringUtils.chop(cleanedTemplate);
     }
     return hive.executeStatement(renderQueryTemplate(cleanedTemplate));
-  }
-
-  public Row[] runSparkSQLQuery(DerbyDiskDB derby, String queryTemplate) {
-    SparkSession spark = getSparkSession(derby);
-    Dataset<Row> ds = spark.sql(renderQueryTemplate(queryTemplate));
-    Row[] rows = (Row[]) ds.collect();
-    spark.stop();
-    return rows;
   }
 
   public void initHive() {

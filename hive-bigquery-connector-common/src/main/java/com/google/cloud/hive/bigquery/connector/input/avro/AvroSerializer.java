@@ -15,15 +15,13 @@
  */
 package com.google.cloud.hive.bigquery.connector.input.avro;
 
-import com.google.cloud.hive.bigquery.connector.utils.DateTimeUtils;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroSchemaInfo;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
+import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +29,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.util.Utf8;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
-import org.apache.hadoop.hive.common.type.TimestampTZ;
 import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
@@ -96,23 +93,11 @@ public class AvroSerializer {
           .toArray();
     }
 
-    if (objectInspector instanceof DateObjectInspector) {
-      return new DateWritable((int) avroObject);
+    Object converted =
+        HiveUtils.getHiveCompat().convertTimeUnitFromAvro(objectInspector, avroObject);
+    if (converted != null) {
+      return converted;
     }
-
-    if (objectInspector instanceof TimestampObjectInspector) {
-      LocalDateTime localDateTime = LocalDateTime.parse(((Utf8) avroObject).toString());
-      Timestamp timestamp = DateTimeUtils.getHiveTimestampFromLocalDatetime(localDateTime);
-      TimestampWritable timestampWritable = new TimestampWritable();
-      timestampWritable.setInternal(timestamp.getTime(), timestamp.getNanos());
-      return timestampWritable;
-    }
-
-    if (objectInspector instanceof TimestampLocalTZObjectInspector) {
-      TimestampTZ timestampTZ = DateTimeUtils.getHiveTimestampTZFromUTC((long) avroObject);
-      return new TimestampLocalTZWritable(timestampTZ);
-    }
-
 
     if (objectInspector instanceof ByteObjectInspector) { // Tiny Int
       return new ByteWritable(((Long) avroObject).byteValue());

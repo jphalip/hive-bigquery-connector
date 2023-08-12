@@ -59,33 +59,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class {@link BigQueryMetaHook} can be used to validate and perform different actions during the
- * creation and dropping of Hive tables, or during the execution of certain write operations.
+ * Class {@link BigQueryMetaHookBase} can be used to validate and perform different actions during
+ * the creation and dropping of Hive tables, or during the execution of certain write operations.
  */
-public class BigQueryMetaHook extends DefaultHiveMetaHook {
+public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BigQueryMetaHook.class);
-
-  public static final List<PrimitiveObjectInspector.PrimitiveCategory> SUPPORTED_HIVE_PRIMITIVES =
-      ImmutableList.of(
-          PrimitiveObjectInspector.PrimitiveCategory.BYTE, // Tiny Int
-          PrimitiveObjectInspector.PrimitiveCategory.SHORT, // Small Int
-          PrimitiveObjectInspector.PrimitiveCategory.INT, // Regular Int
-          PrimitiveObjectInspector.PrimitiveCategory.LONG, // Big Int
-          PrimitiveObjectInspector.PrimitiveCategory.FLOAT,
-          PrimitiveObjectInspector.PrimitiveCategory.DOUBLE,
-          PrimitiveObjectInspector.PrimitiveCategory.DATE,
-          PrimitiveObjectInspector.PrimitiveCategory.TIMESTAMP,
-          PrimitiveObjectInspector.PrimitiveCategory.BINARY,
-          PrimitiveObjectInspector.PrimitiveCategory.BOOLEAN,
-          PrimitiveObjectInspector.PrimitiveCategory.CHAR,
-          PrimitiveObjectInspector.PrimitiveCategory.VARCHAR,
-          PrimitiveObjectInspector.PrimitiveCategory.STRING,
-          PrimitiveObjectInspector.PrimitiveCategory.DECIMAL);
+  private static final Logger LOG = LoggerFactory.getLogger(BigQueryMetaHookBase.class);
 
   Configuration conf;
 
-  public BigQueryMetaHook(Configuration conf) {
+  protected List<PrimitiveObjectInspector.PrimitiveCategory> getSupportedTypes() {
+    return (Arrays.asList(
+        PrimitiveCategory.BYTE, // Tiny Int
+        PrimitiveCategory.SHORT, // Small Int
+        PrimitiveCategory.INT, // Regular Int
+        PrimitiveCategory.LONG, // Big Int
+        PrimitiveCategory.FLOAT,
+        PrimitiveCategory.DOUBLE,
+        PrimitiveCategory.DATE,
+        PrimitiveCategory.TIMESTAMP,
+        PrimitiveCategory.BINARY,
+        PrimitiveCategory.BOOLEAN,
+        PrimitiveCategory.CHAR,
+        PrimitiveCategory.VARCHAR,
+        PrimitiveCategory.STRING,
+        PrimitiveCategory.DECIMAL));
+  }
+
+  public BigQueryMetaHookBase(Configuration conf) {
     this.conf = conf;
   }
 
@@ -105,7 +106,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
       validateTypeInfo(mapValueTypeInfo);
     } else if (typeInfo.getCategory() == Category.PRIMITIVE) {
       PrimitiveCategory primitiveCategory = ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
-      if (!SUPPORTED_HIVE_PRIMITIVES.contains(primitiveCategory)) {
+      if (!getSupportedTypes().contains(primitiveCategory)) {
         throw new MetaException("Unsupported Hive type: " + typeInfo.getTypeName());
       }
     } else {
@@ -114,7 +115,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
   }
 
   /** Validates that the given FieldSchemas are supported. */
-  private void validateHiveTypes(List<FieldSchema> fieldSchemas) throws MetaException {
+  protected void validateHiveTypes(List<FieldSchema> fieldSchemas) throws MetaException {
     for (FieldSchema schema : fieldSchemas) {
       TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(schema.getType());
       validateTypeInfo(typeInfo);
@@ -122,7 +123,8 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
   }
 
   /** Throws an exception if the table contains a column with the given name. */
-  private void assertDoesNotContainColumn(Table hmsTable, String columnName) throws MetaException {
+  protected void assertDoesNotContainColumn(Table hmsTable, String columnName)
+      throws MetaException {
     List<FieldSchema> columns = hmsTable.getSd().getCols();
     for (FieldSchema column : columns) {
       if (column.getName().equalsIgnoreCase(columnName)) {
@@ -132,7 +134,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
     }
   }
 
-  private void createBigQueryTable(Table hmsTable, TableInfo bigQueryTableInfo) {
+  protected void createBigQueryTable(Table hmsTable, TableInfo bigQueryTableInfo) {
     Injector injector =
         Guice.createInjector(
             new BigQueryClientModule(),
@@ -149,7 +151,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
     bigQueryService.create(bigQueryTableInfo);
   }
 
-  private void configJobDetailsForIndirectWrite(
+  protected void configJobDetailsForIndirectWrite(
       HiveBigQueryConfig opts, JobDetails jobDetails, Schema bigQuerySchema, Injector injector)
       throws MetaException {
     // validate the temp GCS path to store the temporary Avro files
@@ -161,6 +163,10 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
         AvroUtils.getAvroSchema(rowObjectInspector, bigQuerySchema.getFields());
     jobDetails.setAvroSchema(avroSchema);
   }
+
+  protected abstract void setupStats(Table table);
+
+  protected abstract void setupIngestionTimePartitioning(Table table) throws MetaException;
 
   /**
    * Performs required validations prior to creating the table
@@ -226,12 +232,10 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
         Map<String, String> basicStats = BigQueryUtils.getBasicStatistics(bqClient, tableId);
         basicStats.put(StatsSetupConst.COLUMN_STATS_ACCURATE, "{\"BASIC_STATS\":\"true\"}");
         table.getParameters().putAll(basicStats);
+      } else {
+        setupStats(table);
       }
-      // TODO: Check if we can enable stats for Hive v2
-      //      else {
-      //                StatsSetupConst.setStatsStateForCreateTable(
-      //                    table.getParameters(), null, StatsSetupConst.FALSE);
-      //      }
+
       return;
     }
 
@@ -260,7 +264,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
       if (partitionField.isPresent()) {
         tpBuilder.setField(partitionField.get());
       } else {
-        throw new MetaException("Ingestion-time partitioned tables are not supported in Hive v2.");
+        setupIngestionTimePartitioning(table);
       }
       OptionalLong partitionExpirationMs = opts.getPartitionExpirationMs();
       if (partitionExpirationMs.isPresent()) {
@@ -434,7 +438,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
     // Do nothing
   }
 
-  private TableId getTableId(Table table) throws MetaException {
+  protected TableId getTableId(Table table) throws MetaException {
     String bqTable = table.getParameters().get(HiveBigQueryConfig.TABLE_KEY);
     if (bqTable == null) {
       throw new MetaException("bq.table needs to be set in format of project.dataset.table.");
@@ -447,7 +451,7 @@ public class BigQueryMetaHook extends DefaultHiveMetaHook {
     return BigQueryUtil.parseTableId(bqTable);
   }
 
-  private void validateTempGcsPath(String tempGcsPath, Injector injector) throws MetaException {
+  protected void validateTempGcsPath(String tempGcsPath, Injector injector) throws MetaException {
     if (tempGcsPath == null || tempGcsPath.trim().equals("")) {
       throw new MetaException(
           String.format(

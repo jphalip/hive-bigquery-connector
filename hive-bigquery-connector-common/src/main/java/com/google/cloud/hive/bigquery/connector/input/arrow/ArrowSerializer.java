@@ -15,22 +15,18 @@
  */
 package com.google.cloud.hive.bigquery.connector.input.arrow;
 
-import com.google.cloud.hive.bigquery.connector.utils.DateTimeUtils;
+import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.*;
 import java.util.*;
 import org.apache.arrow.vector.*;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.complex.StructVector;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
+import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
-import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.DoubleWritable;
-import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.io.ShortWritable;
-import org.apache.hadoop.hive.serde2.io.TimestampWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.*;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.*;
 import org.apache.hadoop.io.*;
@@ -98,14 +94,10 @@ public class ArrowSerializer {
       return new BytesWritable(((VarBinaryVector) value).getObject(rowId));
     }
 
-    if (objectInspector instanceof DateObjectInspector) {
-      return new DateWritable(((DateDayVector) value).get(rowId));
-    }
-
-    if (objectInspector instanceof TimestampObjectInspector) {
-      LocalDateTime localDateTime = ((TimeStampMicroVector) value).getObject(rowId);
-      Timestamp timestamp = DateTimeUtils.getHiveTimestampFromLocalDatetime(localDateTime);
-      return new TimestampWritable(timestamp);
+    Object converted =
+        HiveUtils.getHiveCompat().convertTimeUnitFromArrow(objectInspector, value, rowId);
+    if (converted != null) {
+      return converted;
     }
 
     if (objectInspector instanceof ListObjectInspector) { // Array/List type

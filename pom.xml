@@ -60,6 +60,7 @@
         <module>hive-bigquery-parent</module>
         <module>shaded-dependencies</module>
         <module>shaded-test-dependencies</module>
+        <module>shaded-sparksql</module>
         <module>hive-bigquery-connector-common</module>
     </modules>
 
@@ -88,7 +89,6 @@
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>

@@ -26,14 +26,6 @@
             <artifactId>hive-bigquery-connector-common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
-        <dependency>
-            <groupId>${project.parent.groupId}</groupId>
-            <artifactId>hive-bigquery-connector-common</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>${project.parent.groupId}</groupId>
@@ -41,6 +33,16 @@
             <version>${project.parent.version}</version>
             <classifier>shaded</classifier>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- Test dependencies -->
+
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>hive-bigquery-connector-common</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
