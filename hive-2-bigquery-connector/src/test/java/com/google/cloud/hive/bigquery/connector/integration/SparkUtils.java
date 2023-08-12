@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+import com.klarna.hiverunner.HiveShell;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -15,15 +16,6 @@ import org.apache.spark.sql.types.StructType;
 import scala.collection.mutable.WrappedArray;
 
 public class SparkUtils {
-
-    public static Row[] runSparkSQLQuery(DerbyDiskDB derby, String queryTemplate) {
-        SparkSession spark = getSparkSession(derby);
-        Dataset<Row> ds = spark.sql(renderQueryTemplate(queryTemplate));
-        Row[] rows = (Row[]) ds.collect();
-        spark.stop();
-        return rows;
-    }
-
 
     /**
      * Creates the Metastore derby database on disk instead of in-memory so it can be shared between

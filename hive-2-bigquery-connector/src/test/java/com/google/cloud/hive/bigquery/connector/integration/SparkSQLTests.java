@@ -15,27 +15,37 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
-import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
-import static com.google.cloud.hive.bigquery.connector.TestUtils.TEST_TABLE_NAME;
-import static org.junit.jupiter.api.Assertions.*;
-
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
+import com.google.cloud.hive.bigquery.connector.TestUtils;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.common.collect.Streams;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.DerbyDiskDB;
+import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.getSparkSession;
 import scala.collection.immutable.Map;
 import scala.collection.mutable.WrappedArray;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class SparkSQLTests extends IntegrationTestsBase {
+
+  public Row[] runSparkSQLQuery(DerbyDiskDB derby, String queryTemplate) {
+    SparkSession spark = getSparkSession(derby);
+    Dataset<Row> ds = spark.sql(renderQueryTemplate(queryTemplate));
+    Row[] rows = (Row[]) ds.collect();
+    spark.stop();
+    return rows;
+  }
 
   @ParameterizedTest
   @MethodSource(IntegrationTestsBase.EXECUTION_ENGINE_READ_FORMAT)
@@ -55,7 +65,7 @@ public class SparkSQLTests extends IntegrationTestsBase {
         new Object[] {
           new Object[] {999L, "abcd"},
         },
-        TestUtils.simplifySparkRows(rows));
+        SparkUtils.simplifySparkRows(rows));
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -119,16 +129,16 @@ public class SparkSQLTests extends IntegrationTestsBase {
     assertEquals(4.2, row.getDouble(12));
     assertEquals(
         "{min=-99999999999999999999999999999.999999999, max=99999999999999999999999999999.999999999, pi=3.140000000, big_pi=31415926535897932384626433832.795028841}",
-        TestUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(13)).toString());
-    assertArrayEquals(new Long[] {1l, 2l, 3l}, TestUtils.convertSparkArray((WrappedArray) row.get(14)));
+        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(13)).toString());
+    assertArrayEquals(new Long[] {1l, 2l, 3l}, SparkUtils.convertSparkArray((WrappedArray) row.get(14)));
     assertEquals(
         "{i=111},{i=222},{i=333}",
-        Arrays.stream(TestUtils.convertSparkArray((WrappedArray) row.get(15)))
+        Arrays.stream(SparkUtils.convertSparkArray((WrappedArray) row.get(15)))
             .map(s -> s.toString())
             .collect(Collectors.joining(",")));
     assertEquals(
         "{float_field=4.2, ts_field=2019-03-18 11:23:45.678901}",
-        TestUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(16)).toString());
+        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(16)).toString());
     // Map type
     Map map = (Map) row.get(17);
     assertEquals(2, map.size());
@@ -149,7 +159,7 @@ public class SparkSQLTests extends IntegrationTestsBase {
     createExternalTable(
         TestUtils.ALL_TYPES_TABLE_NAME, TestUtils.HIVE_ALL_TYPES_TABLE_DDL, TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using Spark SQL
-    SparkSession spark = TestUtils.getSparkSession(derby);
+    SparkSession spark = SparkUtils.getSparkSession(derby);
     spark.sql(
         String.join(
             "\n",
