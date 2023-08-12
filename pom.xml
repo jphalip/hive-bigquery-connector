@@ -60,7 +60,6 @@
         <module>hive-bigquery-parent</module>
         <module>shaded-dependencies</module>
         <module>shaded-test-dependencies</module>
-        <module>shaded-sparksql</module>
         <module>hive-bigquery-connector-common</module>
     </modules>
 
@@ -72,6 +71,7 @@
             </activation>
             <modules>
                 <module>hive-2-bigquery-connector</module>
+                <module>shaded-sparksql</module>
             </modules>
         </profile>
         <profile>
@@ -84,8 +84,6 @@
             </modules>
         </profile>
     </profiles>
-
-
 
     <build>
         <plugins>

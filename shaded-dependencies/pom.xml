@@ -26,6 +26,7 @@
   </parent>
 
   <artifactId>shaded-dependencies</artifactId>
+  <version>hive${hive.version}-${revision}</version>
 
   <licenses>
       <license>
@@ -147,6 +148,14 @@
 
   <build>
     <plugins>
+      <!-- Instruct not to publish this module to Maven Central -->
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <configuration>
+          <skipStaging>true</skipStaging>
+        </configuration>
+      </plugin>
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

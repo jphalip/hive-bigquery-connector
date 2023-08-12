@@ -71,7 +71,7 @@
     <dependency>
       <groupId>${project.parent.groupId}</groupId>
       <artifactId>shaded-dependencies</artifactId>
-      <version>${project.parent.version}</version>
+      <version>hive${hive.version}-${project.parent.version}</version>
       <classifier>shaded</classifier>
       <scope>provided</scope>
     </dependency>
