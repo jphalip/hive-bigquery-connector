@@ -20,12 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.bigquery.TableResult;
-import com.google.cloud.hive.bigquery.connector.EnabledIfHive2;
-import com.google.cloud.hive.bigquery.connector.EnabledIfHive3;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import java.io.IOException;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -338,7 +334,7 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
   // ---------------------------------------------------------------------------------------------------
 
   /** Check that we can read all types of data from BigQuery. */
-  public Object[] restReadAllTypes(String readDataFormat, String additionalCol) throws IOException {
+  public Object[] readAllTypes(String readDataFormat, String additionalCol) throws IOException {
     initHive(getDefaultExecutionEngine(), readDataFormat);
     createExternalTable(
         ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
@@ -346,7 +342,6 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
     String query =
         String.join(
             "\n",
-            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
             "11,",
             "22,",
             "33,",
@@ -371,11 +366,16 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
             "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
                 + " 999)])],",
             // Wall clock (no timezone)
-            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
-            ")");
+            "cast(\"2000-01-01T00:23:45.123456\" as datetime)");
     if (additionalCol != null) {
       query += ",\n" + additionalCol;
     }
+    query =
+        String.join(
+            "\n",
+            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
+            query,
+            ")");
     runBqQuery(query);
     // Read the data using Hive
     List<Object[]> rows = runHiveQuery("SELECT * FROM " + ALL_TYPES_TABLE_NAME);
@@ -422,28 +422,6 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
         map.get("b_key"));
     assertEquals("2000-01-01 00:23:45.123456", row[17]);
     return row;
-  }
-
-  @ParameterizedTest
-  @MethodSource(READ_FORMAT)
-  @EnabledIfHive2
-  public void testReadAllTypesHive2(String readDataFormat) throws IOException {
-    restReadAllTypes(readDataFormat, null);
-  }
-
-  @ParameterizedTest
-  @MethodSource(READ_FORMAT)
-  @EnabledIfHive3
-  public void testReadAllTypesHive3(String readDataFormat) throws IOException {
-    // (Pacific/Honolulu, -10:00)
-    String additionalCol = "cast(\"2000-01-01T00:23:45.123456-10\" as timestamp)";
-    Object[] row = restReadAllTypes(readDataFormat, additionalCol);
-    assertEquals(
-        "2000-01-01T10:23:45.123456Z", // 'Z' == UTC
-        Instant.from(
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS VV")
-                    .parse(row[18].toString()))
-            .toString());
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -668,7 +646,6 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
             "\"2\",",
             "NULL,",
             "NULL,",
-            "NULL,",
             "2.0,",
             "4.2,",
             "struct(",
@@ -681,6 +658,7 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
             "NULL,",
             "NULL,",
             "NULL",
+            "NULL,",
             ")"));
     // Read the data using Hive
     Map<String, String[]> castings = new HashMap<>();

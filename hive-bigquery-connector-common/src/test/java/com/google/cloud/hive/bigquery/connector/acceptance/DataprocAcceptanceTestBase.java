@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import test.hivebqcon.com.google.cloud.dataproc.v1.Cluster;
 import test.hivebqcon.com.google.cloud.dataproc.v1.ClusterConfig;
 import test.hivebqcon.com.google.cloud.dataproc.v1.ClusterControllerClient;

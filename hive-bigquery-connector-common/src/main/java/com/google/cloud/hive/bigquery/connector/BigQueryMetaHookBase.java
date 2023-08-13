@@ -69,21 +69,24 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
   Configuration conf;
 
   protected List<PrimitiveObjectInspector.PrimitiveCategory> getSupportedTypes() {
-    return (Arrays.asList(
-        PrimitiveCategory.BYTE, // Tiny Int
-        PrimitiveCategory.SHORT, // Small Int
-        PrimitiveCategory.INT, // Regular Int
-        PrimitiveCategory.LONG, // Big Int
-        PrimitiveCategory.FLOAT,
-        PrimitiveCategory.DOUBLE,
-        PrimitiveCategory.DATE,
-        PrimitiveCategory.TIMESTAMP,
-        PrimitiveCategory.BINARY,
-        PrimitiveCategory.BOOLEAN,
-        PrimitiveCategory.CHAR,
-        PrimitiveCategory.VARCHAR,
-        PrimitiveCategory.STRING,
-        PrimitiveCategory.DECIMAL));
+    List<PrimitiveObjectInspector.PrimitiveCategory> types = new ArrayList<>();
+    types.addAll(
+        Arrays.asList(
+            PrimitiveCategory.BYTE, // Tiny Int
+            PrimitiveCategory.SHORT, // Small Int
+            PrimitiveCategory.INT, // Regular Int
+            PrimitiveCategory.LONG, // Big Int
+            PrimitiveCategory.FLOAT,
+            PrimitiveCategory.DOUBLE,
+            PrimitiveCategory.DATE,
+            PrimitiveCategory.TIMESTAMP,
+            PrimitiveCategory.BINARY,
+            PrimitiveCategory.BOOLEAN,
+            PrimitiveCategory.CHAR,
+            PrimitiveCategory.VARCHAR,
+            PrimitiveCategory.STRING,
+            PrimitiveCategory.DECIMAL));
+    return types;
   }
 
   public BigQueryMetaHookBase(Configuration conf) {

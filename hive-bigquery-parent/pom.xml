@@ -24,8 +24,7 @@
     <version>${revision}</version>
     <packaging>pom</packaging>
     <name>Hive BigQuery Connector Build Parent</name>
-    <description>Parent project for all the Hive BigQuery Connector artifacts
-    </description>
+    <description>Parent project for all the Hive BigQuery Connector artifacts</description>
 
     <url>https://github.com/GoogleCloudDataproc/hive-bigquery-connector</url>
 
@@ -67,7 +66,7 @@
         <google-cloud-dataproc.version>4.7.0</google-cloud-dataproc.version>
         <google-cloud-storage.version>2.20.1</google-cloud-storage.version>
         <grpc.version>1.53.0</grpc.version>
-        <junit.version>5.9.2</junit.version>
+        <junit-jupiter.version>5.10.0</junit-jupiter.version>
         <hamcrest.version>2.2</hamcrest.version>
         <hiverunner.version>6.1.0</hiverunner.version>
         <truth.version>1.1.3</truth.version>
@@ -101,12 +100,6 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.36</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.conscrypt</groupId>

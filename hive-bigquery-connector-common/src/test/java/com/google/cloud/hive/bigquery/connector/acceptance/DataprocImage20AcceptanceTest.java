@@ -15,14 +15,14 @@
  */
 package com.google.cloud.hive.bigquery.connector.acceptance;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public class DataprocImage20AcceptanceTest extends DataprocAcceptanceTestBase {
 
   private static AcceptanceTestContext context;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     context = DataprocAcceptanceTestBase.setup("2.0-debian10");
   }
@@ -31,7 +31,7 @@ public class DataprocImage20AcceptanceTest extends DataprocAcceptanceTestBase {
     super(context);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     DataprocAcceptanceTestBase.tearDown(context);
   }
