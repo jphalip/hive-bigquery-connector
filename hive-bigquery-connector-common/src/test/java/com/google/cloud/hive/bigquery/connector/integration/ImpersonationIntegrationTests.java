@@ -20,11 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.api.client.http.HttpResponseException;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.Test;
-import test.hivebqcon.com.google.gson.Gson;
-import test.hivebqcon.com.google.gson.JsonObject;
-import test.hivebqcon.com.google.gson.reflect.TypeToken;
 
 public class ImpersonationIntegrationTests extends IntegrationTestsBase {
 
