@@ -52,7 +52,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.avro</groupId>
@@ -64,7 +63,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-common</artifactId>
-      <version>${hadoop.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.google.guava</groupId>
@@ -80,7 +78,6 @@
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-exec</artifactId>
-      <version>${hive.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.pentaho</groupId>
@@ -92,13 +89,11 @@
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-common</artifactId>
-      <version>${hive.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-service</artifactId>
-      <version>${hive.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.pentaho</groupId>
@@ -115,7 +110,6 @@
     <dependency>
       <artifactId>tez-dag</artifactId>
       <groupId>org.apache.tez</groupId>
-      <version>${tez.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -127,7 +121,6 @@
     <dependency>
       <artifactId>tez-common</artifactId>
       <groupId>org.apache.tez</groupId>
-      <version>${tez.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -139,7 +132,6 @@
     <dependency>
       <artifactId>tez-mapreduce</artifactId>
       <groupId>org.apache.tez</groupId>
-      <version>${tez.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
