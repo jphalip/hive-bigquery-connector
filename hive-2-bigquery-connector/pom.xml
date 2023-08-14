@@ -112,10 +112,6 @@
                     <artifactId>jackson-annotations</artifactId>
                     <groupId>com.fasterxml.jackson.core</groupId>
                 </exclusion>
-                <exclusion>
-                    <artifactId>junit</artifactId>
-                    <groupId>junit</groupId>
-                </exclusion>
             </exclusions>
         </dependency>
 

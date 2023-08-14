@@ -99,10 +99,6 @@
           <groupId>org.pentaho</groupId>
           <artifactId>*</artifactId>
         </exclusion>
-        <exclusion>
-          <artifactId>junit</artifactId>
-          <groupId>junit</groupId>
-        </exclusion>
       </exclusions>
     </dependency>
 
