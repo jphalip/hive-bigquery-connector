@@ -333,7 +333,9 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
   // ---------------------------------------------------------------------------------------------------
 
   /** Check that we can read all types of data from BigQuery. */
-  public Object[] readAllTypes(String readDataFormat, String additionalCol) throws IOException {
+  @ParameterizedTest
+  @MethodSource(READ_FORMAT)
+  public void testReadAllTypesHive(String readDataFormat) throws IOException {
     initHive(getDefaultExecutionEngine(), readDataFormat);
     createExternalTable(
         ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
@@ -341,6 +343,7 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
     String query =
         String.join(
             "\n",
+            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
             "11,",
             "22,",
             "33,",
@@ -365,22 +368,14 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
             "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
                 + " 999)])],",
             // Wall clock (no timezone)
-            "cast(\"2000-01-01T00:23:45.123456\" as datetime)");
-    if (additionalCol != null) {
-      query += ",\n" + additionalCol;
-    }
-    query =
-        String.join(
-            "\n",
-            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
-            query,
+            "cast(\"2000-01-01T00:23:45.123456\" as datetime)",
             ")");
     runBqQuery(query);
     // Read the data using Hive
     List<Object[]> rows = runHiveQuery("SELECT * FROM " + ALL_TYPES_TABLE_NAME);
     assertEquals(1, rows.size());
     Object[] row = rows.get(0);
-    assertEquals(additionalCol == null ? 18 : 19, row.length); // Number of columns
+    assertEquals(18, row.length); // Number of columns
     assertEquals((byte) 11, row[0]);
     assertEquals((short) 22, row[1]);
     assertEquals((int) 33, row[2]);
@@ -420,7 +415,6 @@ public class ReadIntegrationTestsBase extends IntegrationTestsBase {
         },
         map.get("b_key"));
     assertEquals("2000-01-01 00:23:45.123456", row[17]);
-    return row;
   }
 
   // ---------------------------------------------------------------------------------------------------

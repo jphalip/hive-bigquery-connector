@@ -87,10 +87,9 @@ public class TestUtils {
               + " (description = 'A description for a MAP'),",
           "ts DATETIME OPTIONS (description = 'A description for a TIMESTAMP')");
 
-  public static String BIGQUERY_ALL_TYPES_WITH_TZ_TABLE_DDL =
+  public static String BIGQUERY_TIMESTAMP_TZ_TABLE_DDL =
       String.join(
           "\n",
-          BIGQUERY_ALL_TYPES_TABLE_DDL + ",",
           "tstz TIMESTAMP OPTIONS (description = 'A description for a TIMESTAMPLOCALTZ')");
 
   public static String BIGQUERY_BIGLAKE_TABLE_CREATE_QUERY =
@@ -137,10 +136,9 @@ public class TestUtils {
           "mp MAP<STRING,MAP<STRING,INT>> COMMENT 'A description for a MAP',",
           "ts TIMESTAMP COMMENT 'A description for a TIMESTAMP'");
 
-  public static String HIVE_ALL_TYPES_WITH_TZ_TABLE_DDL =
+  public static String HIVE_TIMESTAMP_TZ_TABLE_DDL =
       String.join(
           "\n",
-          HIVE_ALL_TYPES_TABLE_DDL + ",",
           "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'");
 
   public static String HIVE_FIELD_TIME_PARTITIONED_TABLE_DDL =

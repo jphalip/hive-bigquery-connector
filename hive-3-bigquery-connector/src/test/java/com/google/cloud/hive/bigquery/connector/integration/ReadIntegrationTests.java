@@ -15,11 +15,14 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
+import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
+import static com.google.cloud.hive.bigquery.connector.TestUtils.ALL_TYPES_TABLE_NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -27,15 +30,29 @@ public class ReadIntegrationTests extends ReadIntegrationTestsBase {
 
   @ParameterizedTest
   @MethodSource(READ_FORMAT)
-  public void testReadAllTypesHive(String readDataFormat) throws IOException {
-    // (Pacific/Honolulu, -10:00)
-    String additionalCol = "cast(\"2000-01-01T00:23:45.123456-10\" as timestamp)";
-    Object[] row = readAllTypes(readDataFormat, additionalCol);
+  public void testReadTimeStampTZ(String readDataFormat) {
+    initHive(getDefaultExecutionEngine(), readDataFormat);
+    createExternalTable(
+        ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
+    // Insert data into the BQ table using the BQ SDK
+    String query =
+        String.join(
+            "\n",
+            String.format("INSERT `${dataset}.%s` VALUES (", ALL_TYPES_TABLE_NAME),
+            // (Pacific/Honolulu, -10:00)
+            "cast(\"2000-01-01T00:23:45.123456-10\" as timestamp)",
+    ")");
+    runBqQuery(query);
+    // Read the data using Hive
+    List<Object[]> rows = runHiveQuery("SELECT * FROM " + ALL_TYPES_TABLE_NAME);
+    assertEquals(1, rows.size());
+    Object[] row = rows.get(0);
+    assertEquals(1, row.length); // Number of columns
     assertEquals(
         "2000-01-01T10:23:45.123456Z", // 'Z' == UTC
         Instant.from(
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS VV")
-                    .parse(row[18].toString()))
+                    .parse(row[0].toString()))
             .toString());
   }
 }

@@ -26,7 +26,7 @@
   </parent>
 
   <artifactId>shaded-dependencies</artifactId>
-  <version>hive${hive.version}-${revision}</version>
+  <version>${revision}</version>
 
   <licenses>
       <license>
