@@ -26,7 +26,7 @@ import com.google.gson.reflect.TypeToken;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.jupiter.api.Test;
 
-public class ImpersonationIntegrationTests extends IntegrationTestsBase {
+public abstract class ImpersonationIntegrationTestsBase extends IntegrationTestsBase {
 
   public static JsonObject getErrorJsonFromHttpResponseException(
       Throwable e, String stackTraceClassName, String stackTraceMethodName) {

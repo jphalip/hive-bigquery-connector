@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class ReadIntegrationTestsBase extends IntegrationTestsBase {
+public abstract class ReadIntegrationTestsBase extends IntegrationTestsBase {
 
   /**
    * Check that attempting to read a table that doesn't exist fails gracefully with a useful error

@@ -15,8 +15,8 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
-public class ReadIntegrationTests extends ReadIntegrationTestsBase {
+public class BigLakeIntegrationTests extends BigLakeIntegrationTestsBase {
 
-  // Tests are from the super-class
+  // Note: Tests are inherited from the parent class
 
 }

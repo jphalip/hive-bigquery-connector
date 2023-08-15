@@ -30,9 +30,7 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class WriteIntegrationTests extends IntegrationTestsBase {
-
-  // ---------------------------------------------------------------------------------------------------
+public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
 
   /** Insert data into a simple table. */
   public void insert(String engine, String writeMethod, String tempGcsPath) {

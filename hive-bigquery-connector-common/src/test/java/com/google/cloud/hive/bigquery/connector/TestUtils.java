@@ -41,6 +41,7 @@ public class TestUtils {
   public static final String TEST_VIEW_NAME = "test_view";
   public static final String ANOTHER_TEST_TABLE_NAME = "another_test";
   public static final String ALL_TYPES_TABLE_NAME = "all_types";
+  public static final String TIMESTAMP_TZ_TABLE_NAME = "timestamp_tz_table";
   public static final String MANAGED_TEST_TABLE_NAME = "managed_test";
   public static final String FIELD_TIME_PARTITIONED_TABLE_NAME = "field_time_partitioned";
   public static final String INGESTION_TIME_PARTITIONED_TABLE_NAME = "ingestion_time_partitioned";
@@ -89,8 +90,7 @@ public class TestUtils {
 
   public static String BIGQUERY_TIMESTAMP_TZ_TABLE_DDL =
       String.join(
-          "\n",
-          "tstz TIMESTAMP OPTIONS (description = 'A description for a TIMESTAMPLOCALTZ')");
+          "\n", "tstz TIMESTAMP OPTIONS (description = 'A description for a TIMESTAMPLOCALTZ')");
 
   public static String BIGQUERY_BIGLAKE_TABLE_CREATE_QUERY =
       String.join(
@@ -137,9 +137,7 @@ public class TestUtils {
           "ts TIMESTAMP COMMENT 'A description for a TIMESTAMP'");
 
   public static String HIVE_TIMESTAMP_TZ_TABLE_DDL =
-      String.join(
-          "\n",
-          "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'");
+      String.join("\n", "tstz TIMESTAMPLOCALTZ COMMENT 'A description for a TIMESTAMPLOCALTZ'");
 
   public static String HIVE_FIELD_TIME_PARTITIONED_TABLE_DDL =
       String.join("\n", "int_val BIGINT,", "ts TIMESTAMP");

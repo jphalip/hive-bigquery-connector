@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 
-public class PartitionIntegrationTests extends IntegrationTestsBase {
+public abstract class PartitionIntegrationTestsBase extends IntegrationTestsBase {
 
   @Test
   public void testFieldTimePartition() {
