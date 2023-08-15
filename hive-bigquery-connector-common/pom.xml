@@ -192,6 +192,15 @@
           <skipTests>true</skipTests>
         </configuration>
       </plugin>
+      <!-- FIXME -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>${maven-surefire-plugin.version}</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
       <plugin>
         <!-- Make the tests available to other modules (e.g. Hive 2 & 3 modules) -->
         <artifactId>maven-jar-plugin</artifactId>

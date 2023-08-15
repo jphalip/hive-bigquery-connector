@@ -22,7 +22,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.cloud.hive</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>hive-bigquery-connector-common</artifactId>
             <version>${project.version}</version>
         </dependency>

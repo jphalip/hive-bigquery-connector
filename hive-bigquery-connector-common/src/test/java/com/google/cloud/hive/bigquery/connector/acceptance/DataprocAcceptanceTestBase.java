@@ -32,6 +32,7 @@ import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTest
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.readGcsFile;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.uploadConnectorInitAction;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.uploadConnectorJar;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.ClusterProperty;
 import com.google.common.collect.ImmutableList;
@@ -59,7 +60,6 @@ import test.hivebqcon.com.google.cloud.dataproc.v1.JobPlacement;
 import test.hivebqcon.com.google.cloud.dataproc.v1.JobStatus;
 import test.hivebqcon.com.google.cloud.dataproc.v1.NodeInitializationAction;
 import test.hivebqcon.com.google.cloud.dataproc.v1.SoftwareConfig;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class DataprocAcceptanceTestBase {
 

@@ -24,7 +24,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.cloud.hive</groupId>
+            <groupId>${project.groupId}</groupId>
             <artifactId>hive-bigquery-connector-common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -49,16 +49,17 @@
 
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>shaded-sparksql</artifactId>
+            <artifactId>shaded-test-dependencies</artifactId>
             <version>${project.version}</version>
             <classifier>shaded</classifier>
             <scope>test</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit-jupiter.version}</version>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>shaded-sparksql</artifactId>
+            <version>${project.version}</version>
+            <classifier>shaded</classifier>
             <scope>test</scope>
         </dependency>
 

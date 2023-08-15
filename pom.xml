@@ -63,6 +63,29 @@
         <module>hive-bigquery-connector-common</module>
     </modules>
 
+<profiles>
+    <profile>
+        <id>hive2</id>
+        <activation>
+            <activeByDefault>false</activeByDefault>
+        </activation>
+        <modules>
+            <module>hive-2-bigquery-connector</module>
+            <module>shaded-sparksql</module>
+        </modules>
+    </profile>
+    <profile>
+        <id>hive3</id>
+        <activation>
+            <activeByDefault>false</activeByDefault>
+        </activation>
+        <modules>
+            <module>hive-3-bigquery-connector</module>
+        </modules>
+    </profile>
+</profiles>
+
+
     <build>
         <plugins>
             <plugin>
