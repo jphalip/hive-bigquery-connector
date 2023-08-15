@@ -15,7 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.output.direct;
 
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.DescriptorProtos;
@@ -122,7 +122,7 @@ public class ProtoSchemaConverter {
     if (oi instanceof PrimitiveObjectInspector) {
       PrimitiveCategory category = ((PrimitiveObjectInspector) oi).getPrimitiveCategory();
       return Preconditions.checkNotNull(
-          HiveUtils.getHiveCompat().getHiveToProtoMappings().get(category),
+          HiveCompat.getInstance().getHiveToProtoMappings().get(category),
           new IllegalStateException("Unexpected type: " + category.name()));
     } else {
       throw new IllegalStateException("Unexpected type: " + oi.getCategory().name());

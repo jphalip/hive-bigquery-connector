@@ -15,9 +15,9 @@
  */
 package com.google.cloud.hive.bigquery.connector.input.avro;
 
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroSchemaInfo;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -94,7 +94,7 @@ public class AvroSerializer {
     }
 
     Object converted =
-        HiveUtils.getHiveCompat().convertTimeUnitFromAvro(objectInspector, avroObject);
+        HiveCompat.getInstance().convertTimeUnitFromAvro(objectInspector, avroObject);
     if (converted != null) {
       return converted;
     }

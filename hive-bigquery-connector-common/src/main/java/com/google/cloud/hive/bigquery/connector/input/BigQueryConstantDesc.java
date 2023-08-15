@@ -15,7 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.input;
 
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.*;
@@ -35,7 +35,7 @@ public class BigQueryConstantDesc extends ExprNodeConstantDesc {
   @Override
   public String getExprString() {
     if (this.typeInfo.getCategory() == ObjectInspector.Category.PRIMITIVE) {
-      return HiveUtils.getHiveCompat().formatPredicateValue(this.typeInfo, this.getValue());
+      return HiveCompat.getInstance().formatPredicateValue(this.typeInfo, this.getValue());
     } else {
       throw new RuntimeException("Unsupported predicate type: " + this.typeInfo.getTypeName());
     }

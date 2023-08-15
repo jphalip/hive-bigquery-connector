@@ -16,7 +16,7 @@
 package com.google.cloud.hive.bigquery.connector.utils.bq;
 
 import com.google.cloud.bigquery.*;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -108,7 +108,7 @@ public class BigQuerySchemaConverter {
       PrimitiveObjectInspector.PrimitiveCategory category =
           ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
       return Preconditions.checkNotNull(
-          HiveUtils.getHiveCompat().getHiveToBqTypeMappings().get(category),
+          HiveCompat.getInstance().getHiveToBqTypeMappings().get(category),
           new IllegalStateException("Unexpected type: " + category.name()));
     } else {
       throw new IllegalStateException("Unexpected type: " + typeInfo.getCategory().name());

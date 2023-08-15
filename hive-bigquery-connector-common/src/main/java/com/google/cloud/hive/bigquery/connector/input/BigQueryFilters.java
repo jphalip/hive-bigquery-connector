@@ -15,9 +15,9 @@
  */
 package com.google.cloud.hive.bigquery.connector.input;
 
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.input.udfs.*;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +31,7 @@ public abstract class BigQueryFilters {
     // Check if it's a function
     if (filterExpr instanceof ExprNodeGenericFuncDesc) {
       ExprNodeGenericFuncDesc function = ((ExprNodeGenericFuncDesc) filterExpr);
-      GenericUDF udf = HiveUtils.getHiveCompat().convertUDF(function, conf);
+      GenericUDF udf = HiveCompat.getInstance().convertUDF(function, conf);
       if (udf == null) {
         // Unsupported UDF. Bail.
         return null;

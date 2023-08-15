@@ -15,7 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.input.arrow;
 
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import java.math.BigDecimal;
 import java.util.*;
@@ -95,7 +95,7 @@ public class ArrowSerializer {
     }
 
     Object converted =
-        HiveUtils.getHiveCompat().convertTimeUnitFromArrow(objectInspector, value, rowId);
+        HiveCompat.getInstance().convertTimeUnitFromArrow(objectInspector, value, rowId);
     if (converted != null) {
       return converted;
     }

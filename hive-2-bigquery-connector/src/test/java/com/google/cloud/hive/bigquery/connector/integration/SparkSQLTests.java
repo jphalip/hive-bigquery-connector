@@ -15,6 +15,10 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
+import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.DerbyDiskDB;
+import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.getSparkSession;
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.hive.bigquery.connector.TestUtils;
@@ -24,18 +28,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.DerbyDiskDB;
-import static com.google.cloud.hive.bigquery.connector.integration.SparkUtils.getSparkSession;
 import scala.collection.immutable.Map;
 import scala.collection.mutable.WrappedArray;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class SparkSQLTests extends IntegrationTestsBase {
 
@@ -52,15 +52,21 @@ public class SparkSQLTests extends IntegrationTestsBase {
   public void testWhereClause(String engine, String readDataFormat) {
     DerbyDiskDB derby = new DerbyDiskDB(hive);
     initHive(engine, readDataFormat);
-    createExternalTable(TestUtils.TEST_TABLE_NAME, TestUtils.HIVE_TEST_TABLE_DDL, TestUtils.BIGQUERY_TEST_TABLE_DDL);
+    createExternalTable(
+        TestUtils.TEST_TABLE_NAME,
+        TestUtils.HIVE_TEST_TABLE_DDL,
+        TestUtils.BIGQUERY_TEST_TABLE_DDL);
     // Insert data into BQ using the BQ SDK
     runBqQuery(
         String.format(
-            "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", TestUtils.TEST_TABLE_NAME));
+            "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')",
+            TestUtils.TEST_TABLE_NAME));
     // Read data with Spark SQL
     Row[] rows =
         runSparkSQLQuery(
-            derby, String.format("SELECT * FROM default.%s WHERE number = 999", TestUtils.TEST_TABLE_NAME));
+            derby,
+            String.format(
+                "SELECT * FROM default.%s WHERE number = 999", TestUtils.TEST_TABLE_NAME));
     assertArrayEquals(
         new Object[] {
           new Object[] {999L, "abcd"},
@@ -77,7 +83,9 @@ public class SparkSQLTests extends IntegrationTestsBase {
     DerbyDiskDB derby = new DerbyDiskDB(hive);
     initHive(IntegrationTestsBase.getDefaultExecutionEngine(), readDataFormat);
     createExternalTable(
-        TestUtils.ALL_TYPES_TABLE_NAME, TestUtils.HIVE_ALL_TYPES_TABLE_DDL, TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
+        TestUtils.ALL_TYPES_TABLE_NAME,
+        TestUtils.HIVE_ALL_TYPES_TABLE_DDL,
+        TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using the BQ SDK
     runBqQuery(
         String.join(
@@ -130,7 +138,8 @@ public class SparkSQLTests extends IntegrationTestsBase {
     assertEquals(
         "{min=-99999999999999999999999999999.999999999, max=99999999999999999999999999999.999999999, pi=3.140000000, big_pi=31415926535897932384626433832.795028841}",
         SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(13)).toString());
-    assertArrayEquals(new Long[] {1l, 2l, 3l}, SparkUtils.convertSparkArray((WrappedArray) row.get(14)));
+    assertArrayEquals(
+        new Long[] {1l, 2l, 3l}, SparkUtils.convertSparkArray((WrappedArray) row.get(14)));
     assertEquals(
         "{i=111},{i=222},{i=333}",
         Arrays.stream(SparkUtils.convertSparkArray((WrappedArray) row.get(15)))
@@ -157,7 +166,9 @@ public class SparkSQLTests extends IntegrationTestsBase {
     initHive(engine, HiveBigQueryConfig.AVRO);
     // Create the BQ table
     createExternalTable(
-        TestUtils.ALL_TYPES_TABLE_NAME, TestUtils.HIVE_ALL_TYPES_TABLE_DDL, TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
+        TestUtils.ALL_TYPES_TABLE_NAME,
+        TestUtils.HIVE_ALL_TYPES_TABLE_DDL,
+        TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using Spark SQL
     SparkSession spark = SparkUtils.getSparkSession(derby);
     spark.sql(

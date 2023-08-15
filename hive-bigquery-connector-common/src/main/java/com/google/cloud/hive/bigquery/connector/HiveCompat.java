@@ -22,11 +22,11 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.input.udfs.*;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.KeyValueObjectInspector;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.protobuf.DescriptorProtos;
 import java.util.*;
 import org.apache.avro.Schema;
@@ -43,7 +43,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class HiveCompatBase {
+public abstract class HiveCompat {
 
   protected static String hiveUDFPackage = "org.apache.hadoop.hive.ql.udf.";
   protected static int hiveUDFPackageLength = hiveUDFPackage.length();
@@ -63,7 +63,25 @@ public abstract class HiveCompatBase {
           "string",
           "boolean");
 
-  private static final Logger LOG = LoggerFactory.getLogger(HiveCompatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HiveCompat.class);
+
+  private static HiveCompat instance = null;
+
+  public static HiveCompat getInstance() {
+    if (instance == null) {
+      ServiceLoader<HiveCompat> serviceLoader = ServiceLoader.load(HiveCompat.class);
+      instance =
+          Streams.stream(serviceLoader.iterator())
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new IllegalArgumentException(
+                          String.format(
+                              "Could not load instance of '%', please check the META-INF/services directory in the connector's jar",
+                              HiveCompat.class.getCanonicalName())));
+    }
+    return instance;
+  }
 
   public abstract Object convertHiveTimeUnitToBq(
       ObjectInspector objectInspector, Object hiveValue, String writeMethod);
@@ -175,7 +193,7 @@ public abstract class HiveCompatBase {
         && getIdenticalBridgeUDFs().contains(((GenericUDFBridge) udf).getUdfClassName())) {
       return udf;
     }
-    if (HiveUtils.getHiveCompat().getUDFsRequiringExtraParentheses().contains(udf.getUdfName())) {
+    if (HiveCompat.getInstance().getUDFsRequiringExtraParentheses().contains(udf.getUdfName())) {
       return new BigQueryUDFWrapParentheses(udf);
     }
     if (udf instanceof GenericUDFNvl) {

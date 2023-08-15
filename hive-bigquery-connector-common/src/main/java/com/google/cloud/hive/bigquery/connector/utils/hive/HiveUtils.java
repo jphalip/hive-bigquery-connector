@@ -15,8 +15,6 @@
  */
 package com.google.cloud.hive.bigquery.connector.utils.hive;
 
-import com.google.cloud.hive.bigquery.connector.HiveCompatBase;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -27,8 +25,6 @@ import org.apache.hadoop.hive.metastore.api.Table;
  * temporary files uniquely named after the individual tasks.
  */
 public class HiveUtils {
-
-  private static HiveCompatBase compat = null;
 
   public static boolean isExternalTable(Table table) {
     if (table == null) {
@@ -66,21 +62,5 @@ public class HiveUtils {
     String tezCommitter = conf.get("hive.tez.mapreduce.output.committer.class");
     return (tezCommitter != null
         && tezCommitter.equals("org.apache.tez.mapreduce.committer.MROutputCommitter"));
-  }
-
-  public static HiveCompatBase getHiveCompat() {
-    if (compat == null) {
-      try {
-        Class<?> clazz = Class.forName("com.google.cloud.hive.bigquery.connector.HiveCompat");
-        compat = (HiveCompatBase) clazz.getDeclaredConstructor().newInstance();
-      } catch (ClassNotFoundException
-          | InstantiationException
-          | IllegalAccessException
-          | NoSuchMethodException
-          | InvocationTargetException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return compat;
   }
 }

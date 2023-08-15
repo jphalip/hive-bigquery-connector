@@ -16,8 +16,8 @@
 package com.google.cloud.hive.bigquery.connector.utils.avro;
 
 import com.google.cloud.bigquery.FieldList;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.JobDetails;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,7 +45,7 @@ public class AvroUtils {
     for (int i = 0; i < allStructFieldRefs.size(); i++) {
       StructField structField = allStructFieldRefs.get(i);
       Schema fieldSchema =
-          HiveUtils.getHiveCompat()
+          HiveCompat.getInstance()
               .getAvroSchema(structField.getFieldObjectInspector(), bigqueryFields.get(i));
       Schema.Field avroField =
           new Schema.Field(structField.getFieldName(), fieldSchema, null, null);

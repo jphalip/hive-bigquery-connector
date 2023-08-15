@@ -15,8 +15,8 @@
  */
 package com.google.cloud.hive.bigquery.connector.utils.bq;
 
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
-import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hive.serde2.io.*;
 import org.apache.hadoop.hive.serde2.io.ByteWritable;
@@ -74,7 +74,7 @@ public class BigQueryValueConverter {
     }
 
     Object converted =
-        HiveUtils.getHiveCompat().convertHiveTimeUnitToBq(objectInspector, hiveValue, writeMethod);
+        HiveCompat.getInstance().convertHiveTimeUnitToBq(objectInspector, hiveValue, writeMethod);
     if (converted != null) {
       return converted;
     }
