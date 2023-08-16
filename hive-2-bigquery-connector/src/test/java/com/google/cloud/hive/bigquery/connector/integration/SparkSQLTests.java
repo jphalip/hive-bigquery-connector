@@ -100,8 +100,6 @@ public class SparkSQLTests extends IntegrationTestsBase {
             "\"var char\",",
             "\"string\",",
             "cast(\"2019-03-18\" as date),",
-            // Wall clock (no timezone)
-            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
             "cast(\"bytes\" as bytes),",
             "2.0,",
             "4.2,",
@@ -115,8 +113,11 @@ public class SparkSQLTests extends IntegrationTestsBase {
             "[(select as struct 111), (select as struct 222), (select as struct 333)],",
             "struct(4.2, cast(\"2019-03-18 11:23:45.678901\" as datetime)),",
             "[struct('a_key', [struct('a_subkey', 888)]), struct('b_key', [struct('b_subkey',"
-                + " 999)])]",
-            ")"));
+                + " 999)])],",
+            // Wall clock (no timezone)
+            "cast(\"2000-01-01T00:23:45.123456\" as datetime)",
+            ")"
+            ));
     // Read the data using Spark SQL
     Row[] rows = runSparkSQLQuery(derby, "SELECT * FROM default." + TestUtils.ALL_TYPES_TABLE_NAME);
     assertEquals(1, rows.length);
@@ -131,28 +132,28 @@ public class SparkSQLTests extends IntegrationTestsBase {
     assertEquals("var char", row.get(6));
     assertEquals("string", row.get(7));
     assertEquals("2019-03-18", row.get(8).toString());
-    assertEquals("2000-01-01 00:23:45.123456", row.get(9).toString());
-    assertArrayEquals("bytes".getBytes(), (byte[]) row.get(10));
-    assertEquals(2.0, row.getFloat(11));
-    assertEquals(4.2, row.getDouble(12));
+    assertArrayEquals("bytes".getBytes(), (byte[]) row.get(9));
+    assertEquals(2.0, row.getFloat(10));
+    assertEquals(4.2, row.getDouble(11));
     assertEquals(
         "{min=-99999999999999999999999999999.999999999, max=99999999999999999999999999999.999999999, pi=3.140000000, big_pi=31415926535897932384626433832.795028841}",
-        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(13)).toString());
+        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(12)).toString());
     assertArrayEquals(
-        new Long[] {1l, 2l, 3l}, SparkUtils.convertSparkArray((WrappedArray) row.get(14)));
+        new Long[] {1l, 2l, 3l}, SparkUtils.convertSparkArray((WrappedArray) row.get(13)));
     assertEquals(
         "{i=111},{i=222},{i=333}",
-        Arrays.stream(SparkUtils.convertSparkArray((WrappedArray) row.get(15)))
+        Arrays.stream(SparkUtils.convertSparkArray((WrappedArray) row.get(14)))
             .map(s -> s.toString())
             .collect(Collectors.joining(",")));
     assertEquals(
         "{float_field=4.2, ts_field=2019-03-18 11:23:45.678901}",
-        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(16)).toString());
+        SparkUtils.convertSparkRowToMap((GenericRowWithSchema) row.get(15)).toString());
     // Map type
-    Map map = (Map) row.get(17);
+    Map map = (Map) row.get(16);
     assertEquals(2, map.size());
     assertEquals(888, ((Map) map.get("a_key").get()).get("a_subkey").get());
     assertEquals(999, ((Map) map.get("b_key").get()).get("b_subkey").get());
+    assertEquals("2000-01-01 00:23:45.123456", row.get(17).toString());
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -184,8 +185,6 @@ public class SparkSQLTests extends IntegrationTestsBase {
             "\"var char\",",
             "\"string\",",
             "CAST(\"2019-03-18\" AS DATE),",
-            // Wall clock (no timezone)
-            "CAST(\"2000-01-01 00:23:45.123456\" as TIMESTAMP),",
             "CAST(\"bytes\" AS BINARY),",
             "2.0,",
             "4.2,",
@@ -199,7 +198,9 @@ public class SparkSQLTests extends IntegrationTestsBase {
             "ARRAY(NAMED_STRUCT('i', CAST (1 AS BIGINT))),",
             "NAMED_STRUCT('float_field', CAST(4.2 AS FLOAT), 'ts_field', CAST"
                 + " (\"2019-03-18 01:23:45.678901\" AS TIMESTAMP)),",
-            "MAP('mykey', MAP('subkey', 999))",
+            "MAP('mykey', MAP('subkey', 999)),",
+            // Wall clock (no timezone)
+            "CAST(\"2000-01-01 00:23:45.123456\" as TIMESTAMP)",
             "FROM (select '1') t"));
     // Read the data using the BQ SDK
     TableResult result =
@@ -218,11 +219,10 @@ public class SparkSQLTests extends IntegrationTestsBase {
     assertEquals("var char", row.get(6).getStringValue());
     assertEquals("string", row.get(7).getStringValue());
     assertEquals("2019-03-18", row.get(8).getStringValue());
-    assertEquals("2000-01-01T00:23:45.123456", row.get(9).getStringValue());
-    assertArrayEquals("bytes".getBytes(), row.get(10).getBytesValue());
-    assertEquals(2.0, row.get(11).getDoubleValue());
-    assertEquals(4.2, row.get(12).getDoubleValue());
-    FieldValueList struct = row.get(13).getRecordValue();
+    assertArrayEquals("bytes".getBytes(), row.get(9).getBytesValue());
+    assertEquals(2.0, row.get(10).getDoubleValue());
+    assertEquals(4.2, row.get(11).getDoubleValue());
+    FieldValueList struct = row.get(12).getRecordValue();
     assertEquals(
         "-99999999999999999999999999999.999999999",
         struct.get("min").getNumericValue().toPlainString());
@@ -233,23 +233,23 @@ public class SparkSQLTests extends IntegrationTestsBase {
     assertEquals(
         "31415926535897932384626433832.795028841",
         struct.get("big_pi").getNumericValue().toPlainString());
-    FieldValueList array = (FieldValueList) row.get(14).getValue();
+    FieldValueList array = (FieldValueList) row.get(13).getValue();
     assertEquals(3, array.size());
     assertEquals(1, array.get(0).getLongValue());
     assertEquals(2, array.get(1).getLongValue());
     assertEquals(3, array.get(2).getLongValue());
-    FieldValueList arrayOfStructs = (FieldValueList) row.get(15).getValue();
+    FieldValueList arrayOfStructs = (FieldValueList) row.get(14).getValue();
     assertEquals(1, arrayOfStructs.size());
     struct = (FieldValueList) arrayOfStructs.get(0).getValue();
     assertEquals(1L, struct.get(0).getLongValue());
     // Mixed struct
-    struct = row.get(16).getRecordValue();
+    struct = row.get(15).getRecordValue();
     assertEquals(
         4.199999809265137,
         struct.get("float_field").getDoubleValue()); // TODO: Address discrepancy here
     assertEquals("2019-03-18T01:23:45.678901", struct.get("ts_field").getStringValue());
     // Check the Map type
-    FieldValueList map = (FieldValueList) row.get(17).getRepeatedValue();
+    FieldValueList map = (FieldValueList) row.get(16).getRepeatedValue();
     assertEquals(1, map.size());
     FieldValueList entry = map.get(0).getRecordValue();
     assertEquals("mykey", entry.get(0).getStringValue());
@@ -257,5 +257,6 @@ public class SparkSQLTests extends IntegrationTestsBase {
     FieldValueList subEntry = entry.get(1).getRepeatedValue().get(0).getRecordValue();
     assertEquals("subkey", subEntry.get(0).getStringValue());
     assertEquals(999, subEntry.get(1).getLongValue());
+    assertEquals("2000-01-01T00:23:45.123456", row.get(17).getStringValue());
   }
 }

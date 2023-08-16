@@ -118,10 +118,24 @@
               </filters>
               <relocations>
                 <relocation>
-                  <pattern>org</pattern>
-                  <shadedPattern>test.hivebqcon.org</shadedPattern>
+                  <pattern>com</pattern>
+                  <shadedPattern>test.spark.hivebqcon.com</shadedPattern>
                   <includes>
-                    <!-- Shading needed for Spark SQL: -->
+                    <include>com.fasterxml.**</include>
+                    <include>com.codahale.**</include>
+                  </includes>
+                </relocation>
+                <relocation>
+                  <pattern>io</pattern>
+                  <shadedPattern>test.spark.hivebqcon.io</shadedPattern>
+                  <includes>
+                    <include>io.netty.**</include>
+                  </includes>
+                </relocation>
+                <relocation>
+                  <pattern>org</pattern>
+                  <shadedPattern>test.spark.hivebqcon.org</shadedPattern>
+                  <includes>
                     <include>org.apache.commons.**</include>
                     <include>org.codehaus.janino.**</include>
                     <include>org.codehaus.commons.**</include>

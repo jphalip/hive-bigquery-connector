@@ -250,8 +250,6 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "\"var char\",",
             "\"string\",",
             "CAST(\"2019-03-18\" AS DATE),",
-            // Wall clock (no timezone)
-            "CAST(\"2000-01-01 00:23:45.123456\" as TIMESTAMP),",
             "CAST(\"bytes\" AS BINARY),",
             "2.0,",
             "4.2,",
@@ -265,8 +263,11 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "ARRAY(NAMED_STRUCT('i', CAST (1 AS BIGINT))),",
             "NAMED_STRUCT('float_field', CAST(4.2 AS FLOAT), 'ts_field', CAST"
                 + " (\"2019-03-18 01:23:45.678901\" AS TIMESTAMP)),",
-            "MAP('mykey', MAP('subkey', 999))",
-            "FROM (select '1') t"));
+            "MAP('mykey', MAP('subkey', 999)),",
+            // Wall clock (no timezone)
+            "CAST(\"2000-01-01 00:23:45.123456\" as TIMESTAMP)",
+            "FROM (select '1') t"
+            ));
     // Read the data using the BQ SDK
     TableResult result =
         runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", ALL_TYPES_TABLE_NAME));
@@ -354,7 +355,6 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "NULL,",
             "NULL,",
             "NULL,",
-            "NULL,",
             "NAMED_STRUCT(",
             "  'min', CAST(0.0 AS" + " DECIMAL(38,9)),",
             "  'max', CAST(0.0 AS" + " DECIMAL(38,9)),",
@@ -364,7 +364,8 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "ARRAY(CAST (1 AS BIGINT)),",
             "ARRAY(NAMED_STRUCT('i', CAST (1 AS BIGINT))),",
             "NAMED_STRUCT('float_field', CAST(0.0 AS FLOAT), 'ts_field', CAST ('' AS TIMESTAMP)),",
-            "MAP('mykey', MAP('subkey', 0))"));
+            "MAP('mykey', MAP('subkey', 0)),",
+            "NULL"));
     // Read the data using the BQ SDK
     TableResult result =
         runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", ALL_TYPES_TABLE_NAME));
