@@ -58,7 +58,8 @@
 
     <modules>
         <module>hive-bigquery-parent</module>
-        <module>shaded-dependencies</module>
+        <module>shaded-hive-parent</module>
+        <module>shaded-hive2.3.6-hadoop2.7</module>
         <module>shaded-test-dependencies</module>
         <module>hive-bigquery-connector-common</module>
     </modules>
@@ -70,6 +71,7 @@
             <activeByDefault>false</activeByDefault>
         </activation>
         <modules>
+            <module>shaded-hive2.3.9-hadoop2.10</module>
             <module>hive-2-bigquery-connector</module>
             <module>shaded-sparksql</module>
         </modules>
@@ -80,6 +82,7 @@
             <activeByDefault>false</activeByDefault>
         </activation>
         <modules>
+            <module>shaded-hive3.1.2-hadoop2.10</module>
             <module>hive-3-bigquery-connector</module>
         </modules>
     </profile>
@@ -170,6 +173,7 @@
                 </configuration>
             </plugin>
 
+            <!--
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
@@ -190,7 +194,7 @@
                     </execution>
                 </executions>
             </plugin>
-
+-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
