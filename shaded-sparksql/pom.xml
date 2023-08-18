@@ -38,11 +38,16 @@
   <!--
   What is this module for?
 
-  This module is used to shade some libraries (e.g. Guava) to avoid conflicts with the connector's
-  dependencies while running acceptance tests in Dataproc.
+  This module is used to shade some libraries to avoid conflicts with the connector's
+  dependencies while running integration tests.
   This module is meant to be added as a dependency in the connector's pom.xml with the `test`
   scope.
   -->
+
+  <!-- FIXME -->
+<!--  <properties>-->
+<!--    <hive.version>2.3.6</hive.version>-->
+<!--  </properties>-->
 
   <dependencies>
 
@@ -150,33 +155,6 @@
                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
               </transformers>
               <shadedArtifactAttached>true</shadedArtifactAttached>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-
-      <!-- The build-helper-maven-plugin is used to add the shaded JAR into the IDE environment, so that -->
-      <!-- IntelliJ can find the repackaged classes. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>${build-helper-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>package</phase>
-            <goals>
-              <goal>attach-artifact</goal>
-            </goals>
-            <configuration>
-              <artifacts>
-                <artifact>
-                  <file>${project.build.directory}/${project.build.finalName}-shaded.jar</file>
-                  <type>jar</type>
-                  <classifier>optional</classifier>
-                </artifact>
-              </artifacts>
             </configuration>
           </execution>
         </executions>

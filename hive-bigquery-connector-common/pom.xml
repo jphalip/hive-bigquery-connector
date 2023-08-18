@@ -37,14 +37,6 @@
       </license>
   </licenses>
 
-  <properties>
-    <hadoop.version>2.7.0</hadoop.version>
-    <hive.version>2.3.6</hive.version>
-    <tez.version>0.9.2</tez.version>
-    <gcs-connector.version>hadoop2-2.2.3</gcs-connector.version>
-  </properties>
-
-
   <dependencies>
 
     <dependency>
@@ -77,14 +69,6 @@
     </dependency>
 
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>shaded-hive2.3.6-hadoop2.7</artifactId>
-      <version>${project.version}</version>
-      <classifier>shaded</classifier>
-      <scope>provided</scope>
-    </dependency>
-
-    <dependency>
       <groupId>com.google.cloud.bigdataoss</groupId>
       <artifactId>gcs-connector</artifactId>
       <version>${gcs-connector.version}</version>
@@ -94,6 +78,101 @@
         <!-- Exclude all GRPC dependencies to avoid some packaging issues -->
         <exclusion>
           <groupId>io.grpc</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-mapreduce-client-common</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-exec</artifactId>
+      <version>${hive.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.pentaho</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-common</artifactId>
+      <version>${hive.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-service</artifactId>
+      <version>${hive.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.pentaho</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+
+    <dependency>
+      <artifactId>tez-dag</artifactId>
+      <groupId>org.apache.tez</groupId>
+      <version>${tez.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <artifactId>tez-common</artifactId>
+      <groupId>org.apache.tez</groupId>
+      <version>${tez.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <artifactId>tez-mapreduce</artifactId>
+      <groupId>org.apache.tez</groupId>
+      <version>${tez.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>*</artifactId>
         </exclusion>
       </exclusions>
@@ -192,21 +271,19 @@
   <build>
     <plugins>
       <plugin>
-        <!-- FIXME -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
-          <skipTests>true</skipTests>
+          <skipTests>true</skipTests>  <!-- FIXME: Run the unit tests in children classes? -->
         </configuration>
       </plugin>
-      <!-- FIXME -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
-          <skip>true</skip>
+          <skip>true</skip>  <!-- Exclude integration test base classes here since they're effectively executed by the children classes in other modules-->
         </configuration>
       </plugin>
       <plugin>

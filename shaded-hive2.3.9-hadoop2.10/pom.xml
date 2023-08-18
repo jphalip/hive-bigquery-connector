@@ -43,7 +43,49 @@
         <gcs-connector.version>hadoop2-2.2.14</gcs-connector.version>
 
         <shade.skip>false</shade.skip>
+        <attach.shaded.jar>true</attach.shaded.jar>
     </properties>
 
+    <dependencies>
+
+        <!-- Test dependencies -->
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>hive-2-bigquery-connector</artifactId>
+            <version>${revision}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>shaded-sparksql</artifactId>
+            <version>${project.version}</version>
+            <classifier>shaded</classifier>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${maven-failsafe-plugin.version}</version>
+                <configuration>
+                    <!-- Exclude the unshaded compile-time dependencies during integration tests -->
+                    <classpathDependencyScopeExclude>provided</classpathDependencyScopeExclude>
+<!--                    <classpathDependencyExcludes>-->
+<!--                        <classpathDependencyExclude>com.google.guava:guava</classpathDependencyExclude>-->
+<!--                    </classpathDependencyExcludes>-->
+
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>${project.build.directory}/${project.build.finalName}-shaded.jar</additionalClasspathElement>
+                    </additionalClasspathElements>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

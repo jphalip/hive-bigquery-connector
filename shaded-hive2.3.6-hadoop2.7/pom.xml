@@ -43,7 +43,14 @@
         <gcs-connector.version>hadoop2-2.2.3</gcs-connector.version>
 
         <shade.skip>false</shade.skip>
+        <attach.shaded.jar>true</attach.shaded.jar>
     </properties>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>hive-2-bigquery-connector</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
 </project>

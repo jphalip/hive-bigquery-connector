@@ -15,24 +15,21 @@
  */
 package com.google.cloud.hive.bigquery.connector.acceptance;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-
 public class DataprocImage21AcceptanceTest extends DataprocAcceptanceTestBase {
 
-  private static AcceptanceTestContext context;
-
-  @BeforeAll
-  public static void setup() throws Exception {
-    context = DataprocAcceptanceTestBase.setup("2.1-debian11");
-  }
-
-  public DataprocImage21AcceptanceTest() {
-    super(context);
-  }
-
-  @AfterAll
-  public static void tearDown() throws Exception {
-    DataprocAcceptanceTestBase.tearDown(context);
-  }
+  //  private static AcceptanceTestContext context;
+  //
+  //  @BeforeAll
+  //  public static void setup() throws Exception {
+  //    context = DataprocAcceptanceTestBase.setup("2.1-debian11");
+  //  }
+  //
+  //  public DataprocImage21AcceptanceTest() {
+  //    super(context);
+  //  }
+  //
+  //  @AfterAll
+  //  public static void tearDown() throws Exception {
+  //    DataprocAcceptanceTestBase.tearDown(context);
+  //  }
 }

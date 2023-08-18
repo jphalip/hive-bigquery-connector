@@ -24,7 +24,6 @@
         <version>${revision}</version>
         <relativePath>../shaded-hive-parent</relativePath>
 
-        <shade.skip>false</shade.skip>
     </parent>
 
     <artifactId>shaded-hive3.1.2-hadoop2.10</artifactId>
@@ -43,7 +42,16 @@
         <hive.version>3.1.2</hive.version>
         <tez.version>0.9.2</tez.version>
         <gcs-connector.version>hadoop2-2.2.14</gcs-connector.version>
+
+        <shade.skip>false</shade.skip>
+        <attach.shaded.jar>true</attach.shaded.jar>
     </properties>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>hive-3-bigquery-connector</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
 </project>

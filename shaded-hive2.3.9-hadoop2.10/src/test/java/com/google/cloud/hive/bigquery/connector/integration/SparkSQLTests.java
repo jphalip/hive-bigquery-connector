@@ -23,11 +23,11 @@ import com.google.cloud.bigquery.FieldValueList;
 import com.google.cloud.bigquery.TableResult;
 import com.google.cloud.hive.bigquery.connector.TestUtils;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
-import com.google.common.collect.Streams;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hadoop.shaded.com.google.common.collect.Streams;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -116,8 +116,7 @@ public class SparkSQLTests extends IntegrationTestsBase {
                 + " 999)])],",
             // Wall clock (no timezone)
             "cast(\"2000-01-01T00:23:45.123456\" as datetime)",
-            ")"
-            ));
+            ")"));
     // Read the data using Spark SQL
     Row[] rows = runSparkSQLQuery(derby, "SELECT * FROM default." + TestUtils.ALL_TYPES_TABLE_NAME);
     assertEquals(1, rows.length);

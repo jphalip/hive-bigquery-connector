@@ -266,8 +266,7 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "MAP('mykey', MAP('subkey', 999)),",
             // Wall clock (no timezone)
             "CAST(\"2000-01-01 00:23:45.123456\" as TIMESTAMP)",
-            "FROM (select '1') t"
-            ));
+            "FROM (select '1') t"));
     // Read the data using the BQ SDK
     TableResult result =
         runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", ALL_TYPES_TABLE_NAME));

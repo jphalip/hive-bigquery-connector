@@ -124,33 +124,6 @@
         </executions>
       </plugin>
 
-
-      <!-- The build-helper-maven-plugin is used to add the shaded JAR into the IDE environment, so that -->
-      <!-- IntelliJ can find the repackaged classes. -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>${build-helper-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <phase>package</phase>
-            <goals>
-              <goal>attach-artifact</goal>
-            </goals>
-            <configuration>
-              <artifacts>
-                <artifact>
-                  <file>${project.build.directory}/${project.build.finalName}-shaded.jar</file>
-                  <type>jar</type>
-                  <classifier>optional</classifier>
-                </artifact>
-              </artifacts>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
     </plugins>
   </build>
 </project>
