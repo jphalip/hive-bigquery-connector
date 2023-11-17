@@ -59,7 +59,11 @@ public class HiveUtils {
     if (!sparkAppId.equals("")) {
       return "spark-app-id-" + sparkAppId;
     }
-    return "no-query-id";
+    String pigScriptId = conf.get("pig.script.id", "");
+    if (!pigScriptId.equals("")) {
+      return "pig-script-id-" + pigScriptId;
+    }
+    throw new RuntimeException("No query id found in Hadoop conf");
   }
 
   public static String getDbTableName(Table table) {

@@ -74,6 +74,6 @@ public class OutputCommitterUtils {
 
   public static Set<String> getOutputTables(Configuration conf) {
     String outputTables = conf.get(HiveBigQueryConfig.OUTPUT_TABLES_KEY);
-    return Sets.newHashSet(HiveBigQueryConfig.TABLE_NAME_SPLITTER.split(outputTables));
+    return Sets.newHashSet(HiveBigQueryConfig.OUTPUT_TABLE_NAMES_SPLITTER.split(outputTables));
   }
 }

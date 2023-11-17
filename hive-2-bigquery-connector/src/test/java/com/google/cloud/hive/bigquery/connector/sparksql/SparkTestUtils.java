@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -42,7 +43,7 @@ public class SparkTestUtils {
     public DerbyDiskDB(HiveShell hive) {
       dir = hive.getBaseDir().resolve("derby_" + UUID.randomUUID());
       url = String.format("jdbc:derby:%s;create=true", dir);
-      hive.setHiveConfValue("javax.jdo.option.ConnectionURL", url);
+      System.getProperties().setProperty("javax.jdo.option.ConnectionURL", url);
     }
 
     /**
@@ -60,13 +61,18 @@ public class SparkTestUtils {
     }
   }
 
-  public static SparkSession getSparkSession(DerbyDiskDB derby) {
+  public static SparkSession getSparkSession(DerbyDiskDB derby, HiveConf conf) {
     derby.releaseLock();
     SparkConf sparkConf =
         new SparkConf()
             .set("spark.sql.defaultUrlStreamHandlerFactory.enabled", "false")
             .set("spark.hadoop.javax.jdo.option.ConnectionURL", derby.url)
             .setMaster("local");
+    Properties hiveProps = conf.getAllProperties();
+    for (String key : hiveProps.stringPropertyNames()) {
+      String value = hiveProps.getProperty(key);
+      sparkConf.set(key, value);
+    }
     SparkSession spark =
         SparkSession.builder()
             .appName("example")

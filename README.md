@@ -19,6 +19,7 @@ software versions:
 * Hadoop 2.10.2, 3.2.3, and 3.3.3.
 * Tez 0.9.2 on Hadoop 2, and Tez 0.10.1 on Hadoop 3.
 * Spark SQL 3.4.1.
+* Pig 0.17.0.
 
 ## Installation
 
@@ -507,6 +508,22 @@ spark = SparkSession.builder \
 df = spark.sql("SELECT * FROM mytable")
 rows = df.collect()
 ```
+
+## Apache Pig integration
+
+The connector supports Apache Pig via HCatalog.
+
+Example:
+
+```pig
+result = LOAD 'mydatabase.mytable' USING org.apache.hive.hcatalog.pig.HCatLoader();
+STORE result INTO 'my-output-folder' USING PigStorage(',');
+```
+
+Notes:
+
+* Pig only supports `datetime` types with milliseconds precision, so you may encounter precision
+  loss if you have values with nanoseconds in Hive or BigQuery.
 
 ## BigLake integration
 

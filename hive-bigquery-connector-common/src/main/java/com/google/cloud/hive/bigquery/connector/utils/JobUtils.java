@@ -23,6 +23,7 @@ import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.util.List;
@@ -104,11 +105,17 @@ public class JobUtils {
   }
 
   public static Path getQueryTempOutputPath(Configuration conf, HiveBigQueryConfig opts) {
-    // direct method writes stream ref files in workdir, indirect writes to gcs temp dir.
+    // Direct method writes stream ref files in workdir, indirect method writes Avro files
+    // to GCS.
     if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
       return getQueryWorkDir(conf);
     } else {
-      String parentPath = opts.getTempGcsPath();
+      String parentPath =
+          Preconditions.checkNotNull(
+              opts.getTempGcsPath(),
+              String.format(
+                  "Missing property `%s` for indirect write job",
+                  HiveBigQueryConfig.TEMP_GCS_PATH_KEY));
       return getQuerySubDir(conf, parentPath);
     }
   }
@@ -142,8 +149,9 @@ public class JobUtils {
    */
   public static void deleteJobTempOutputDir(Configuration conf, JobDetails jobDetails)
       throws IOException {
-    LOG.info("Deleting job temporary output directory {}", jobDetails.getJobTempOutputPath());
-    FileSystemUtils.deleteDir(conf, jobDetails.getJobTempOutputPath());
+    Path outputPath = jobDetails.getJobTempOutputPath();
+    LOG.info("Deleting job temporary output directory {}", outputPath);
+    FileSystemUtils.deleteDir(conf, outputPath);
   }
 
   /** Deletes the work directory for a query when the query is complete (success or fail). */

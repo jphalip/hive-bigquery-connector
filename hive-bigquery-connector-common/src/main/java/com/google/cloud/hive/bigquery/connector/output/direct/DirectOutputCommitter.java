@@ -51,7 +51,7 @@ public class DirectOutputCommitter {
             jobDetails.getJobTempOutputPath(),
             JobUtils.getTableIdPrefix(jobDetails.getTableId()),
             HiveBigQueryConfig.STREAM_FILE_EXTENSION);
-    if (streamFiles.size() <= 0) {
+    if (streamFiles.size() == 0) {
       LOG.info("Nothing to commit, found 0 stream files.");
       return;
     }

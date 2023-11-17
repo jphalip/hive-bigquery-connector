@@ -59,7 +59,7 @@ public class IndirectAvroRecordWriter
     String writerId = WriterRegistry.getWriterId();
     Path filePath =
         JobUtils.getTaskWriterOutputFile(
-            jobDetails, taskID.toString(), writerId, HiveBigQueryConfig.LOAD_FILE_EXTENSION);
+            jobDetails, taskID, writerId, HiveBigQueryConfig.LOAD_FILE_EXTENSION);
     this.dataFileWriter = AvroUtils.createDataFileWriter(jobConf, jobDetails, filePath);
   }
 

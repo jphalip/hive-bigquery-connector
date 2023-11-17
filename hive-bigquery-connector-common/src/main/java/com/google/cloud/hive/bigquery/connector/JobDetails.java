@@ -80,10 +80,6 @@ public class JobDetails {
     this.jobTempOutputPath = tempPath;
   }
 
-  public String getHmsDbTableName() {
-    return this.hmsTableProperties.getProperty("name");
-  }
-
   public Properties getTableProperties() {
     return hmsTableProperties;
   }

@@ -91,8 +91,9 @@ public class HiveBigQueryConfig
   static final String GCS_CONFIG_CREDENTIALS_FILE_PROPERTY =
       "google.cloud.auth.service.account.json.keyfile";
 
-  public static final String TABLE_NAME_SEPARATOR = "|";
-  public static final Splitter TABLE_NAME_SPLITTER = Splitter.on(TABLE_NAME_SEPARATOR);
+  public static final String OUTPUT_TABLE_NAMES_SEPARATOR = "|";
+  public static final Splitter OUTPUT_TABLE_NAMES_SPLITTER =
+      Splitter.on(OUTPUT_TABLE_NAMES_SEPARATOR);
   public static final String THIS_IS_AN_OUTPUT_JOB = "...this.is.an.output.job...";
   public static final String LOAD_FILE_EXTENSION = "avro";
   public static final String STREAM_FILE_EXTENSION = "stream";
