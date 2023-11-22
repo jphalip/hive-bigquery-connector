@@ -171,7 +171,7 @@ public class SparkSQLIntegrationTests extends IntegrationTestsBase {
         TestUtils.HIVE_ALL_TYPES_TABLE_DDL,
         TestUtils.BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using Spark SQL
-    SparkSession spark = SparkTestUtils.getSparkSession(derby, hive.getHiveConf());
+    SparkSession spark = getSparkSession(derby, hive.getHiveConf());
     spark.sql(
         String.join(
             "\n",
