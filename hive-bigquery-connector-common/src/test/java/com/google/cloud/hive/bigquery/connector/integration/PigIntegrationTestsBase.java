@@ -27,9 +27,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.hive.common.util.HiveVersionInfo;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,10 +51,27 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     return null;
   }
 
+  /**
+   * Converts timestamps to account for how HCatalog and Pig treat Hive timestamps. See:
+   * https://cwiki.apache.org/confluence/display/hive/hcatalog+loadstore#HCatalogLoadStore-DataTypeMappings
+   * Note that HCatalog appears to convert timestamps differently in Hive 2 and Hive 3.
+   */
+  public static String convertTimestampForHive2(String timestamp) {
+    LocalDateTime localDateTime =
+        LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+    ZonedDateTime zonedSystemTime = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
+    ZonedDateTime zonedUTC = zonedSystemTime.withZoneSameInstant(ZoneId.of("UTC"));
+    return zonedUTC.format(DateTimeFormatter.ISO_INSTANT);
+  }
+
   @ParameterizedTest
   @MethodSource(EXECUTION_ENGINE_READ_FORMAT)
   public void testReadAllTypes(String engine, String readDataFormat) throws IOException {
-    System.getProperties().put("user.timezone", "UTC");
+    // Note: HCatalog converts Hive dates and timestamps to local timezone.
+    // See:
+    // https://cwiki.apache.org/confluence/display/hive/hcatalog+loadstore#HCatalogLoadStore-DataTypeMappings
+    // So we use UTC to make the tests reproducible.
+    System.getProperties().setProperty("user.timezone", "UTC");
     initHive(engine, readDataFormat);
     createExternalTable(
         TestUtils.ALL_TYPES_TABLE_NAME,
@@ -70,7 +92,7 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
             "\"string\",",
             "cast(\"2019-03-18\" as date),",
             // Wall clock (no timezone)
-            "cast(\"2000-01-01T00:23:45.123456\" as datetime),",
+            "cast(\"2000-01-01 00:23:45.123456\" as datetime),",
             "cast(\"bytes\" as bytes),",
             "2.0,",
             "4.2,",
@@ -98,35 +120,42 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
         String.format(
             "STORE result INTO '%s/output' USING PigStorage('\t');", outputDir.toString()));
     // Check the output
-    String contents = readFileContents(outputDir.resolve("output"), "part-");
+    String[] contents = readFileContents(outputDir.resolve("output"), "part-").split("\t");
+    assertEquals("11", contents[0]);
+    assertEquals("22", contents[1]);
+    assertEquals("33", contents[2]);
+    assertEquals("44", contents[3]);
+    assertEquals("true", contents[4]);
+    assertEquals("fixed char", contents[5]);
+    assertEquals("var char", contents[6]);
+    assertEquals("string", contents[7]);
+    assertEquals("2019-03-18T00:00:00.000Z", contents[8]);
+    if (HiveVersionInfo.getVersion().startsWith("2.")) {
+      assertEquals(convertTimestampForHive2("2000-01-01 00:23:45.123"), contents[9]);
+    } else {
+      assertEquals("2000-01-01T00:23:45.123Z", contents[9]);
+    }
+    assertEquals("bytes", contents[10]);
+    assertEquals("2.0", contents[11]);
+    assertEquals("4.2", contents[12]);
     assertEquals(
-        String.join(
-            "\t",
-            "11",
-            "22",
-            "33",
-            "44",
-            "true",
-            "fixed char",
-            "var char",
-            "string",
-            "2019-03-18T00:00:00.000Z",
-            "2000-01-01T00:23:45.123Z",
-            "bytes",
-            "2.0",
-            "4.2",
-            "(-99999999999999999999999999999.999999999,99999999999999999999999999999.999999999,3.14,31415926535897932384626433832.795028841)",
-            "{(1),(2),(3)}",
-            "{(111),(222),(333)}",
-            "(4.2,2019-03-18T11:23:45.678Z)",
-            "[a_key#[a_subkey#888],b_key#[b_subkey#999]]"),
-        contents);
+        "(-99999999999999999999999999999.999999999,99999999999999999999999999999.999999999,3.14,31415926535897932384626433832.795028841)",
+        contents[13]);
+    assertEquals("{(1),(2),(3)}", contents[14]);
+    assertEquals("{(111),(222),(333)}", contents[15]);
+    if (HiveVersionInfo.getVersion().startsWith("2.")) {
+      assertEquals(
+          String.format("(4.2,%s)", convertTimestampForHive2("2019-03-18 11:23:45.678")),
+          contents[16]);
+    } else {
+      assertEquals("(4.2,2019-03-18T11:23:45.678Z)", contents[16]);
+    }
+    assertEquals("[a_key#[a_subkey#888],b_key#[b_subkey#999]]", contents[17]);
   }
 
   @ParameterizedTest
   @MethodSource(IntegrationTestsBase.EXECUTION_ENGINE_WRITE_METHOD)
   public void testWriteAllTypes(String engine, String writeMethod) throws IOException {
-    System.getProperties().put("user.timezone", "UTC");
     System.getProperties().setProperty(HiveBigQueryConfig.WRITE_METHOD_KEY, writeMethod);
     initHive(engine);
     createExternalTable(
@@ -151,14 +180,14 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
                 "var char",
                 "string",
                 "2019-03-18",
-                "2000-01-01 00:23:45.123",
+                "2000-01-01T00:23:45.123Z",
                 "bytes",
                 "2.0",
                 "4.2",
                 "(-99999999999999999999999999999.999999999,99999999999999999999999999999.999999999,3.14,31415926535897932384626433832.795028841)",
                 "{(1),(2),(3)}",
                 "{(1)}",
-                "(4.2,2019-03-18 01:23:45.678)",
+                "(4.2,2019-03-18T01:23:45.678Z)",
                 // Note: HCatalog appears to not be able to load nested maps. For example, it
                 // would fail with data shaped like "[a_key#[a_subkey#888]]". So we keep it simple
                 // here

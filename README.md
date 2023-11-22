@@ -524,7 +524,8 @@ STORE some_data INTO 'my-database.my-other-table' USING org.apache.hive.hcatalog
 Notes:
 
 * Pig only supports `datetime` types with milliseconds precision, so you may encounter precision
-  loss if you have values with nanoseconds in Hive or BigQuery.
+  loss if you have values with nanoseconds in Hive or BigQuery. Learn more in the HCatalog
+  documentation on [data type mappings](https://cwiki.apache.org/confluence/display/hive/hcatalog+loadstore#HCatalogLoadStore-DataTypeMappings).
 
 ## BigLake integration
 
