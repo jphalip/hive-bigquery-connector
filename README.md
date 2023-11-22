@@ -513,11 +513,12 @@ rows = df.collect()
 
 The connector supports Apache Pig via HCatalog.
 
-Example:
+Here's an example reading from a BigQuery table and writing to another, assuming that
+`my-database.my-table` and `my-database.my-other-table` have been registered as BigQuery tables:
 
 ```pig
-result = LOAD 'mydatabase.mytable' USING org.apache.hive.hcatalog.pig.HCatLoader();
-STORE result INTO 'my-output-folder' USING PigStorage(',');
+some_data = LOAD 'my-database.my-table' USING org.apache.hive.hcatalog.pig.HCatLoader();
+STORE some_data INTO 'my-database.my-other-table' USING org.apache.hive.hcatalog.pig.HCatStorer();
 ```
 
 Notes:
