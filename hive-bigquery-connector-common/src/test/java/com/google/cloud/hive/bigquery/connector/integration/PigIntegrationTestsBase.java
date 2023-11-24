@@ -31,6 +31,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,13 +54,17 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
   }
 
   /**
-   * Converts timestamps to account for how HCatalog and Pig treat Hive timestamps. See:
+   * Converts timestamps to account for how HCatalog and Pig treat Hive timestamps in old versions
+   * of Hive (1 and 2). See:
    * https://cwiki.apache.org/confluence/display/hive/hcatalog+loadstore#HCatalogLoadStore-DataTypeMappings
-   * Note that HCatalog appears to convert timestamps differently in Hive 2 and Hive 3.
    */
-  public static String convertTimestampForHive2(String timestamp) {
-    LocalDateTime localDateTime =
-        LocalDateTime.parse(timestamp, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+  public static String convertTimestampForOldVersionsOfHive(String timestamp) {
+    DateTimeFormatter formatter =
+        new DateTimeFormatterBuilder()
+            .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 6, true)
+            .toFormatter();
+    LocalDateTime localDateTime = LocalDateTime.parse(timestamp, formatter);
     ZonedDateTime zonedSystemTime = ZonedDateTime.of(localDateTime, ZoneId.systemDefault());
     ZonedDateTime zonedUTC = zonedSystemTime.withZoneSameInstant(ZoneId.of("UTC"));
     return zonedUTC.format(DateTimeFormatter.ISO_INSTANT);
@@ -110,7 +116,7 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
             ")"));
     // Define the read command in Pig
     Path outputDir = Files.createTempDirectory("pig-tests");
-    PigServer pigServer = new PigServer(ExecType.LOCAL);
+    PigServer pigServer = new PigServer(ExecType.LOCAL, hive.getHiveConf());
     pigServer.registerQuery(
         String.format(
             "result = LOAD '%s' USING org.apache.hive.hcatalog.pig.HCatLoader();",
@@ -129,11 +135,11 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     assertEquals("fixed char", contents[5]);
     assertEquals("var char", contents[6]);
     assertEquals("string", contents[7]);
-    assertEquals("2019-03-18T00:00:00.000Z", contents[8]);
-    if (HiveVersionInfo.getVersion().startsWith("2.")) {
-      assertEquals(convertTimestampForHive2("2000-01-01 00:23:45.123"), contents[9]);
-    } else {
+    assertTrue(contents[8].startsWith("2019-03-18T00:00:00.000"));
+    if (HiveVersionInfo.getVersion().startsWith("3.")) {
       assertEquals("2000-01-01T00:23:45.123Z", contents[9]);
+    } else {
+      assertEquals(convertTimestampForOldVersionsOfHive("2000-01-01T00:23:45.123"), contents[9]);
     }
     assertEquals("bytes", contents[10]);
     assertEquals("2.0", contents[11]);
@@ -143,12 +149,13 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
         contents[13]);
     assertEquals("{(1),(2),(3)}", contents[14]);
     assertEquals("{(111),(222),(333)}", contents[15]);
-    if (HiveVersionInfo.getVersion().startsWith("2.")) {
-      assertEquals(
-          String.format("(4.2,%s)", convertTimestampForHive2("2019-03-18 11:23:45.678")),
-          contents[16]);
-    } else {
+    if (HiveVersionInfo.getVersion().startsWith("3.")) {
       assertEquals("(4.2,2019-03-18T11:23:45.678Z)", contents[16]);
+    } else {
+      assertEquals(
+          String.format(
+              "(4.2,%s)", convertTimestampForOldVersionsOfHive("2019-03-18T11:23:45.678")),
+          contents[16]);
     }
     assertEquals("[a_key#[a_subkey#888],b_key#[b_subkey#999]]", contents[17]);
   }
@@ -165,7 +172,7 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     // Create the input data
     Path inputDir = Files.createTempDirectory("pig-tests");
     Path inputFile = inputDir.resolve("input.txt");
-    PigServer pigServer = new PigServer(ExecType.LOCAL);
+    PigServer pigServer = new PigServer(ExecType.LOCAL, hive.getHiveConf());
     Files.write(
         inputFile,
         Collections.singletonList(
@@ -242,7 +249,13 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     assertEquals("var char", row.get(6).getStringValue());
     assertEquals("string", row.get(7).getStringValue());
     assertEquals("2019-03-18", row.get(8).getStringValue());
-    assertEquals("2000-01-01T00:23:45.123000", row.get(9).getStringValue());
+    if (HiveVersionInfo.getVersion().startsWith("1.")) {
+      assertEquals(
+          "2000-01-01T00:23:45.123Z",
+          convertTimestampForOldVersionsOfHive(row.get(9).getStringValue()));
+    } else {
+      assertEquals("2000-01-01T00:23:45.123000", row.get(9).getStringValue());
+    }
     assertArrayEquals("bytes".getBytes(), row.get(10).getBytesValue());
     assertEquals(2.0, row.get(11).getDoubleValue());
     assertEquals(4.2, row.get(12).getDoubleValue());
@@ -271,7 +284,14 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     assertEquals(
         4.199999809265137,
         struct.get("float_field").getDoubleValue()); // TODO: Address discrepancy here
-    assertEquals("2019-03-18T01:23:45.678000", struct.get("ts_field").getStringValue());
+
+    if (HiveVersionInfo.getVersion().startsWith("1.")) {
+      assertEquals(
+          "2019-03-18T01:23:45.678Z",
+          convertTimestampForOldVersionsOfHive(struct.get("ts_field").getStringValue()));
+    } else {
+      assertEquals("2019-03-18T01:23:45.678000", struct.get("ts_field").getStringValue());
+    }
     // Check the Map type
     FieldValueList map = (FieldValueList) row.get(17).getRepeatedValue();
     assertEquals(1, map.size());

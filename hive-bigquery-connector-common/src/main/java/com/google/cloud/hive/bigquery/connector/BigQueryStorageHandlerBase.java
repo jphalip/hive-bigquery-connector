@@ -28,6 +28,7 @@ import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
 import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat;
 import com.google.cloud.hive.bigquery.connector.output.MapReduceOutputFormat;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
+import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hcatalog.HCatalogUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.inject.Guice;
@@ -38,7 +39,6 @@ import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
@@ -49,6 +49,7 @@ import org.apache.hadoop.hive.ql.security.authorization.DefaultHiveAuthorization
 import org.apache.hadoop.hive.ql.security.authorization.HiveAuthorizationProvider;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.Deserializer;
+import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
@@ -163,8 +164,39 @@ public abstract class BigQueryStorageHandlerBase
     }
   }
 
+  protected static void validateTempGcsPath(
+      String tempGcsPath, BigQueryCredentialsSupplier credentialsSupplier) {
+    if (tempGcsPath == null || tempGcsPath.trim().equals("")) {
+      throw new RuntimeException(
+          String.format(
+              "The '%s' property must be set when using the '%s' write method.",
+              HiveBigQueryConfig.TEMP_GCS_PATH_KEY, HiveBigQueryConfig.WRITE_METHOD_INDIRECT));
+    } else if (!JobUtils.hasGcsWriteAccess(credentialsSupplier, tempGcsPath)) {
+      throw new RuntimeException(
+          String.format(
+              "Does not have write access to the following GCS path, or bucket does not exist: %s",
+              tempGcsPath));
+    }
+  }
+
+  public static void configureJobDetailsForIndirectWrite(
+      HiveBigQueryConfig opts,
+      JobDetails jobDetails,
+      BigQueryCredentialsSupplier credentialsSupplier) {
+    // validate the temp GCS path to store the temporary Avro files
+    validateTempGcsPath(opts.getTempGcsPath(), credentialsSupplier);
+    // Convert BigQuery schema to Avro schema
+    StructObjectInspector rowObjectInspector =
+        BigQuerySerDe.getRowObjectInspector(jobDetails.getTableProperties());
+    org.apache.avro.Schema avroSchema =
+        AvroUtils.getAvroSchema(rowObjectInspector, jobDetails.getBigquerySchema().getFields());
+    jobDetails.setAvroSchema(avroSchema);
+  }
+
   @Override
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
+    Properties tableProperties = tableDesc.getProperties();
+
     // Special treatment for HCatalog
     if (conf.get("mapreduce.lib.hcatoutput.id") != null && conf.get("hcat.output.schema") == null) {
       registerOutputTable(tableDesc);
@@ -174,20 +206,35 @@ public abstract class BigQueryStorageHandlerBase
       return;
     }
 
-    Properties tableProperties = tableDesc.getProperties();
-    JobDetails jobDetails = new JobDetails();
-    Injector injector =
-        Guice.createInjector(
-            new BigQueryClientModule(),
-            new HiveBigQueryConnectorModule(conf, tableDesc.getProperties()));
-    BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
-    HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
+    // More special treatment for HCatalog
+    if (HCatalogUtils.isHCatalogOutputJob(conf)) {
+      OutputJobInfo outputJobInfo = HCatalogUtils.getHCatalogOutputJobInfo(conf);
+      HCatalogUtils.updateTablePropertiesForHCatalog(tableProperties, outputJobInfo.getTableInfo());
+      conf.set(
+          HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryOutputCommitter.class.getName());
+    }
 
-    // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
-    conf.set(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "true");
+    // Special treatment for Spark
+    if (HiveUtils.isSparkJob(conf)) {
+      registerOutputTable(tableDesc);
+      // Spark uses the new "mapreduce" Hadoop API for the job output format's committer
+      conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
+    }
+
+    String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
+    if (engine.equals("mr")) {
+      // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
+      conf.set(HiveBigQueryConfig.THIS_IS_AN_OUTPUT_JOB, "true");
+    }
 
     // Set config for the GCS Connector
     setGCSAccessTokenProvider(conf);
+
+    Injector injector =
+        Guice.createInjector(
+            new BigQueryClientModule(), new HiveBigQueryConnectorModule(conf, tableProperties));
+    BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
+    HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
 
     // Retrieve some info from the BQ table
     TableId tableId =
@@ -198,43 +245,16 @@ public abstract class BigQueryStorageHandlerBase
     }
 
     // Populate the job details
+    JobDetails jobDetails = new JobDetails();
     jobDetails.setBigquerySchema(bqTableInfo.getDefinition().getSchema());
     jobDetails.setJobTempOutputPath(
         new Path(JobUtils.getQueryTempOutputPath(conf, opts), tableDesc.getTableName()));
     jobDetails.setTableProperties(tableProperties);
     jobDetails.setTableId(tableId);
 
-    // Special treatment for Spark
-    if (HiveUtils.isSparkJob(conf)) {
-      registerOutputTable(tableDesc);
-      if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
-        HiveBigQueryConfig updatedOpts = HiveBigQueryConfig.from(conf, tableProperties);
-        try {
-          BigQueryMetaHookBase.configJobDetailsForIndirectWrite(
-              updatedOpts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
-        } catch (MetaException e) {
-          throw new RuntimeException(e);
-        }
-      }
-      // Spark uses the new "mapreduce" Hadoop API for the job output format's committer
-      conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
-    }
-
-    // More special treatment for HCatalog
-    if (HCatalogUtils.isHCatalogOutputJob(conf)) {
-      OutputJobInfo outputJobInfo = HCatalogUtils.getHCatalogOutputJobInfo(conf);
-      HCatalogUtils.updateTablePropertiesForHCatalog(tableProperties, outputJobInfo.getTableInfo());
-      conf.set(
-          HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryOutputCommitter.class.getName());
-      if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
-        HiveBigQueryConfig updatedOpts = HiveBigQueryConfig.from(conf, tableProperties);
-        try {
-          BigQueryMetaHookBase.configJobDetailsForIndirectWrite(
-              updatedOpts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
-        } catch (MetaException e) {
-          throw new RuntimeException(e);
-        }
-      }
+    if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
+      configureJobDetailsForIndirectWrite(
+          opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
     }
 
     // Save the job details file to disk

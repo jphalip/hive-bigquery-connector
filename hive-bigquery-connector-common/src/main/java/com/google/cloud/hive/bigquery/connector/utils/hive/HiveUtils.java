@@ -22,6 +22,7 @@ import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.TaskAttemptID;
 
@@ -44,6 +45,18 @@ public class HiveUtils {
       return false;
     }
     return "TRUE".equalsIgnoreCase(params.get("EXTERNAL"));
+  }
+
+  public static boolean isMRJob(JobConf job) {
+    return job != null
+        && (HiveConf.getVar(job, HiveConf.ConfVars.PLAN) != null)
+        && (!HiveConf.getVar(job, HiveConf.ConfVars.PLAN).isEmpty());
+  }
+
+  /** Borrowed from Hive 2+ as it's not available in Hive 1. */
+  public static String[] getReadColumnNames(Configuration conf) {
+    String colNames = conf.get("hive.io.file.readcolumn.names", "");
+    return colNames != null && !colNames.isEmpty() ? colNames.split(",") : new String[0];
   }
 
   public static boolean isSparkJob(Configuration conf) {

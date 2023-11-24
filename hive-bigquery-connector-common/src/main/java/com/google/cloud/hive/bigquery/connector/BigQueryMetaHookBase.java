@@ -30,7 +30,6 @@ import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
 import com.google.cloud.hive.bigquery.connector.output.OutputCommitterUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils.CleanUp;
-import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
 import com.google.cloud.hive.bigquery.connector.utils.bq.BigQuerySchemaConverter;
 import com.google.cloud.hive.bigquery.connector.utils.bq.BigQueryUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
@@ -44,7 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.DefaultHiveMetaHook;
+import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
-import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.*;
 import org.apache.hadoop.mapred.JobContext;
 import org.slf4j.Logger;
@@ -62,7 +60,7 @@ import org.slf4j.LoggerFactory;
  * Class {@link BigQueryMetaHookBase} can be used to validate and perform different actions during
  * the creation and dropping of Hive tables, or during the execution of certain write operations.
  */
-public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
+public abstract class BigQueryMetaHookBase implements HiveMetaHook {
 
   private static final Logger LOG = LoggerFactory.getLogger(BigQueryMetaHookBase.class);
 
@@ -152,21 +150,6 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
     BigQuery bigQueryService =
         BigQueryUtils.getBigQueryService(opts, headerProvider, credentialsSupplier);
     bigQueryService.create(bigQueryTableInfo);
-  }
-
-  public static void configJobDetailsForIndirectWrite(
-      HiveBigQueryConfig opts,
-      JobDetails jobDetails,
-      BigQueryCredentialsSupplier credentialsSupplier)
-      throws MetaException {
-    // validate the temp GCS path to store the temporary Avro files
-    validateTempGcsPath(opts.getTempGcsPath(), credentialsSupplier);
-    // Convert BigQuery schema to Avro schema
-    StructObjectInspector rowObjectInspector =
-        BigQuerySerDe.getRowObjectInspector(jobDetails.getTableProperties());
-    org.apache.avro.Schema avroSchema =
-        AvroUtils.getAvroSchema(rowObjectInspector, jobDetails.getBigquerySchema().getFields());
-    jobDetails.setAvroSchema(avroSchema);
   }
 
   protected abstract void setupStats(Table table);
@@ -307,9 +290,8 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
         }
         JobDetails jobDetails = JobDetails.readJobDetailsFile(conf, hmsDbTableName);
         jobDetails.setBigquerySchema(tableSchema);
-
         if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
-          configJobDetailsForIndirectWrite(
+          BigQueryStorageHandlerBase.configureJobDetailsForIndirectWrite(
               opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
         }
         Path queryTempOutputPath = JobUtils.getQueryTempOutputPath(conf, opts);
@@ -326,8 +308,10 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
     // Do nothing yet
   }
 
-  /** Called before insert query. */
-  @Override
+  /**
+   * Called before insert query. It is only called by Hive 2 & 3. Spark, HCatalog, and Hive 1 do not
+   * call it.
+   */
   public void preInsertTable(Table table, boolean overwrite) throws MetaException {
     Map<String, String> tableParameters = table.getParameters();
     Injector injector =
@@ -380,9 +364,6 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
         jobDetails.setTableId(tempTableInfo.getTableId());
         LOG.info("Insert overwrite temporary table {} ", tempTableInfo.getTableId());
       }
-    } else {
-      configJobDetailsForIndirectWrite(
-          opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
     }
     JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);
   }
@@ -392,7 +373,6 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
    * execution engine. This method is not systematically called when using "mr" -- for that, see
    * {@link BigQueryOutputCommitter#commitJob(JobContext)}
    */
-  @Override
   public void commitInsertTable(Table table, boolean overwrite) throws MetaException {
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
     if (engine.equals("tez")) {
@@ -411,7 +391,6 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
     }
   }
 
-  @Override
   public void rollbackInsertTable(Table table, boolean overwrite) throws MetaException {
     // Do nothing, should have been handled by committer
   }
@@ -456,20 +435,5 @@ public abstract class BigQueryMetaHookBase extends DefaultHiveMetaHook {
               + " use default project.");
     }
     return BigQueryUtil.parseTableId(bqTable);
-  }
-
-  protected static void validateTempGcsPath(
-      String tempGcsPath, BigQueryCredentialsSupplier credentialsSupplier) throws MetaException {
-    if (tempGcsPath == null || tempGcsPath.trim().equals("")) {
-      throw new MetaException(
-          String.format(
-              "The '%s' property must be set when using the '%s' write method.",
-              HiveBigQueryConfig.TEMP_GCS_PATH_KEY, HiveBigQueryConfig.WRITE_METHOD_INDIRECT));
-    } else if (!JobUtils.hasGcsWriteAccess(credentialsSupplier, tempGcsPath)) {
-      throw new MetaException(
-          String.format(
-              "Does not have write access to the following GCS path, or bucket does not exist: %s",
-              tempGcsPath));
-    }
   }
 }

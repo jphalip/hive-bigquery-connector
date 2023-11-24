@@ -24,6 +24,7 @@ fi
 
 readonly ACTION=$1
 
+readonly HIVE1_PROFILE="hive1-generic"
 readonly HIVE2_PROFILE="hive2-generic"
 readonly HIVE3_PROFILE="hive3-generic"
 readonly HIVE3_SHADED_DEPS="shaded-deps-hive3.1.2-hadoop2.10.2"
@@ -38,7 +39,7 @@ cd /workspace
 case "$ACTION" in
   # Java code style check
   check)
-    $MVN spotless:check -P"${HIVE2_PROFILE}" && $MVN spotless:check -P"${HIVE3_PROFILE}"
+    $MVN spotless:check -P"${HIVE1_PROFILE}" && $MVN spotless:check -P"${HIVE2_PROFILE}" && $MVN spotless:check -P"${HIVE3_PROFILE}"
     exit
     ;;
 
@@ -53,6 +54,14 @@ case "$ACTION" in
     exit
     ;;
 
+  # Run unit tests for Hive 1
+  unittest_hive1)
+    $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE1_PROFILE}",coverage
+    # Upload test coverage report to Codecov
+    bash <(curl -s https://codecov.io/bash) -K -F "${ACTION}"
+    exit
+    ;;
+
   # Run unit tests for Hive 2
   unittest_hive2)
     $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE2_PROFILE}",coverage
@@ -64,6 +73,15 @@ case "$ACTION" in
   # Run unit tests for Hive 3
   unittest_hive3)
     $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE3_PROFILE}",coverage
+    # Upload test coverage report to Codecov
+    bash <(curl -s https://codecov.io/bash) -K -F "${ACTION}"
+    exit
+    ;;
+
+  # Run integration tests for Hive 1
+  integrationtest_hive1)
+    $MVN failsafe:integration-test failsafe:verify jacoco:report jacoco:report-aggregate \
+      -P"${HIVE1_PROFILE}",coverage,integration
     # Upload test coverage report to Codecov
     bash <(curl -s https://codecov.io/bash) -K -F "${ACTION}"
     exit

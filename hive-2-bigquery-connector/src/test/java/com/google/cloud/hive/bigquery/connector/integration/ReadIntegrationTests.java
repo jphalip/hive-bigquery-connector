@@ -17,6 +17,28 @@ package com.google.cloud.hive.bigquery.connector.integration;
 
 public class ReadIntegrationTests extends ReadIntegrationTestsBase {
 
-  // Tests are from the super-class
+  // Note: Other tests are inherited from the parent class
 
+  /** Smoke test for UDFs that were added in Hive 2 */
+  @Test
+  public void testUDFWhereClauseSmokeForHive3() {
+    System.getProperties().setProperty(HiveBigQueryConfig.FAIL_ON_UNSUPPORTED_UDFS, "true");
+    initHive();
+    createExternalTable(
+        ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
+    String query =
+        "select * from "
+            + ALL_TYPES_TABLE_NAME
+            + " where "
+            + String.join(
+                "\n OR ",
+                "DAYOFWEEK(ts) = 2 AND QUARTER(ts) = 1 AND WEEKOFYEAR(day) = 4",
+                "DATE(day + INTERVAL(5) DAY) > DATE('2001-09-05')",
+                "str RLIKE '^([0-9]|[a-z]|[A-Z])'",
+                "NULLIF(str, 'abcd') IS NULL",
+                "LENGTH(str) > 2",
+                "CHARACTER_LENGTH(str) > 2",
+                "OCTET_LENGTH(str) > 2");
+    runHiveQuery(query);
+  }
 }

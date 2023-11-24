@@ -22,6 +22,7 @@ import com.google.cloud.bigquery.storage.v1.ReadRowsRequest;
 import com.google.cloud.bigquery.storage.v1.ReadSession;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
+import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hive.ql.io.HiveInputFormat.HiveInputSplit;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
 import org.apache.hadoop.hive.ql.plan.*;
 import org.apache.hadoop.hive.serde.serdeConstants;
-import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
 import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.FileSplit;
@@ -186,14 +186,15 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
 
     Set<String> selectedFields;
     String engine = HiveConf.getVar(jobConf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE);
-    if (engine.equals("mr")) {
+    // TODO: In Hive 1, the Hive conf doesn't have a `hive.exec.plan` property, so we currently
+    // can't extract the selected fields from the MR job object, i.e. column pruning doesn't work.
+    if (engine.equals("mr") && HiveUtils.isMRJob(jobConf)) {
       // To-Do: a workaround for HIVE-27115, remove when fix available.
       List<String> neededFields = getMRColumnProjections(jobConf);
       selectedFields =
           neededFields.isEmpty() ? new HashSet<>(columnNames) : new HashSet<>(neededFields);
     } else {
-      selectedFields =
-          new HashSet<>(Arrays.asList(ColumnProjectionUtils.getReadColumnNames(jobConf)));
+      selectedFields = new HashSet<>(Arrays.asList(HiveUtils.getReadColumnNames(jobConf)));
     }
 
     // Fix the BigQuery pseudo columns, if present, as Hive uses lowercase column names

@@ -15,11 +15,11 @@ This connector supports [Dataproc](https://cloud.google.com/dataproc) 2.0 and 2.
 For Hadoop clusters other than Dataproc, the connector has been tested with the following
 software versions:
 
-* Hive 2.3.6, 2.3.9, 3.1.2, and 3.1.3.
-* Hadoop 2.10.2, 3.2.3, and 3.3.3.
+* Hive 1.2.1, 2.3.6, 2.3.9, 3.1.2, and 3.1.3.
+* Hadoop 2.6.4, 2.7.0, 2.10.2, 3.2.3, and 3.3.3.
 * Tez 0.9.2 on Hadoop 2, and Tez 0.10.1 on Hadoop 3.
 * Spark SQL 3.4.1.
-* Pig 0.17.0.
+* Pig 0.16.0, 0.17.0.
 
 ## Installation
 
@@ -45,6 +45,12 @@ Alternately, you can build a JAR from source:
      ```
 
   2. Compile and package the jar:
+
+     * For Hive 1:
+
+      ``` sh
+      ./mvnw package -DskipTests -P hive1-generic
+      ```
 
      * For Hive 2:
 
@@ -318,6 +324,8 @@ performance -- you can use it by setting the `hive.execution.engine=tez` configu
 
 Since BigQuery is [backed by a columnar datastore](https://cloud.google.com/blog/big-data/2016/04/inside-capacitor-bigquerys-next-generation-columnar-storage-format),
 it can efficiently stream data without reading all columns.
+
+Column pruning is currently supported in Hive 2 & 3, but not in Hive 1.
 
 ## Predicate pushdowns
 
@@ -728,6 +736,7 @@ There are multiple options to override the default behavior and to provide custo
 * [Custom Hive UDFs](https://cwiki.apache.org/confluence/display/hive/hiveplugins) (aka Hive plugins) are currently not supported.
 * BigQuery [ingestion time partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#ingestion_time) is currently supported only for read operations.
 * BigQuery [integer range partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#integer_range) is currently not supported.
+* Column pruning is currently supported in Hive 2 & 3, but not in Hive 1.
 
 ## Development
 
