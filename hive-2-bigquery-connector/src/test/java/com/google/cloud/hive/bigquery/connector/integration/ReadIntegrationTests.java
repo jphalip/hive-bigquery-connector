@@ -15,13 +15,18 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
+import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
+
+import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
+import org.junit.jupiter.api.Test;
+
 public class ReadIntegrationTests extends ReadIntegrationTestsBase {
 
   // Note: Other tests are inherited from the parent class
 
   /** Smoke test for UDFs that were added in Hive 2 */
   @Test
-  public void testUDFWhereClauseSmokeForHive3() {
+  public void testUDFWhereClauseSmokeForHive2() {
     System.getProperties().setProperty(HiveBigQueryConfig.FAIL_ON_UNSUPPORTED_UDFS, "true");
     initHive();
     createExternalTable(
