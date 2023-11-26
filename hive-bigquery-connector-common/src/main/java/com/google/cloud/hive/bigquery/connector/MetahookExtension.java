@@ -15,24 +15,16 @@
  */
 package com.google.cloud.hive.bigquery.connector;
 
-import org.apache.hadoop.conf.Configuration;
+import java.util.List;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
 
-public class BigQueryMetaHook extends BigQueryMetaHookBase {
+public interface MetahookExtension {
 
-  public BigQueryMetaHook(Configuration conf) {
-    super(conf);
-  }
+  void setupStats(Table table);
 
-  @Override
-  protected void setupIngestionTimePartitioning(Table table) throws MetaException {
-    throw new MetaException(
-        "Ingestion-time partitioned tables are not supported in Hive versions < 3.x.x");
-  }
+  void setupIngestionTimePartitioning(Table table) throws MetaException;
 
-  @Override
-  protected void setupStats(Table table) {
-    // Do nothing
-  }
+  List<PrimitiveCategory> getSupportedTypes();
 }

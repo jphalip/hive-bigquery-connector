@@ -43,7 +43,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.StatsSetupConst;
 import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
@@ -57,38 +56,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Class {@link BigQueryMetaHookBase} can be used to validate and perform different actions during
- * the creation and dropping of Hive tables, or during the execution of certain write operations.
+ * Class {@link BigQueryMetaHook} can be used to validate and perform different actions during the
+ * creation and dropping of Hive tables, or during the execution of certain write operations.
  */
-public abstract class BigQueryMetaHookBase implements HiveMetaHook {
+public class BigQueryMetaHook {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BigQueryMetaHookBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BigQueryMetaHook.class);
+  MetahookExtension extension;
 
   Configuration conf;
 
-  protected List<PrimitiveObjectInspector.PrimitiveCategory> getSupportedTypes() {
-    List<PrimitiveObjectInspector.PrimitiveCategory> types = new ArrayList<>();
-    types.addAll(
-        Arrays.asList(
-            PrimitiveCategory.BYTE, // Tiny Int
-            PrimitiveCategory.SHORT, // Small Int
-            PrimitiveCategory.INT, // Regular Int
-            PrimitiveCategory.LONG, // Big Int
-            PrimitiveCategory.FLOAT,
-            PrimitiveCategory.DOUBLE,
-            PrimitiveCategory.DATE,
-            PrimitiveCategory.TIMESTAMP,
-            PrimitiveCategory.BINARY,
-            PrimitiveCategory.BOOLEAN,
-            PrimitiveCategory.CHAR,
-            PrimitiveCategory.VARCHAR,
-            PrimitiveCategory.STRING,
-            PrimitiveCategory.DECIMAL));
-    return types;
-  }
+  public static final List<PrimitiveObjectInspector.PrimitiveCategory> basicTypes =
+      Arrays.asList(
+          PrimitiveCategory.BYTE, // Tiny Int
+          PrimitiveCategory.SHORT, // Small Int
+          PrimitiveCategory.INT, // Regular Int
+          PrimitiveCategory.LONG, // Big Int
+          PrimitiveCategory.FLOAT,
+          PrimitiveCategory.DOUBLE,
+          PrimitiveCategory.DATE,
+          PrimitiveCategory.TIMESTAMP,
+          PrimitiveCategory.BINARY,
+          PrimitiveCategory.BOOLEAN,
+          PrimitiveCategory.CHAR,
+          PrimitiveCategory.VARCHAR,
+          PrimitiveCategory.STRING,
+          PrimitiveCategory.DECIMAL);
 
-  public BigQueryMetaHookBase(Configuration conf) {
+  public BigQueryMetaHook(Configuration conf, MetahookExtension extension) {
     this.conf = conf;
+    this.extension = extension;
   }
 
   /** Validates that the given TypeInfo is supported. */
@@ -107,7 +104,7 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
       validateTypeInfo(mapValueTypeInfo);
     } else if (typeInfo.getCategory() == Category.PRIMITIVE) {
       PrimitiveCategory primitiveCategory = ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
-      if (!getSupportedTypes().contains(primitiveCategory)) {
+      if (!extension.getSupportedTypes().contains(primitiveCategory)) {
         throw new MetaException("Unsupported Hive type: " + typeInfo.getTypeName());
       }
     } else {
@@ -124,7 +121,7 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
   }
 
   /** Throws an exception if the table contains a column with the given name. */
-  protected void assertDoesNotContainColumn(Table hmsTable, String columnName)
+  public static void assertDoesNotContainColumn(Table hmsTable, String columnName)
       throws MetaException {
     List<FieldSchema> columns = hmsTable.getSd().getCols();
     for (FieldSchema column : columns) {
@@ -152,17 +149,12 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
     bigQueryService.create(bigQueryTableInfo);
   }
 
-  protected abstract void setupStats(Table table);
-
-  protected abstract void setupIngestionTimePartitioning(Table table) throws MetaException;
-
   /**
    * Performs required validations prior to creating the table
    *
    * @param table Represents hive table object
    * @throws MetaException if table metadata violates the constraints
    */
-  @Override
   public void preCreateTable(Table table) throws MetaException {
     // Make sure the specified types are supported
     validateHiveTypes(table.getSd().getCols());
@@ -221,7 +213,7 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
         basicStats.put(StatsSetupConst.COLUMN_STATS_ACCURATE, "{\"BASIC_STATS\":\"true\"}");
         table.getParameters().putAll(basicStats);
       } else {
-        setupStats(table);
+        extension.setupStats(table);
       }
 
       return;
@@ -252,7 +244,7 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
       if (partitionField.isPresent()) {
         tpBuilder.setField(partitionField.get());
       } else {
-        setupIngestionTimePartitioning(table);
+        extension.setupIngestionTimePartitioning(table);
       }
       OptionalLong partitionExpirationMs = opts.getPartitionExpirationMs();
       if (partitionExpirationMs.isPresent()) {
@@ -303,7 +295,6 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
     }
   }
 
-  @Override
   public void commitCreateTable(Table table) throws MetaException {
     // Do nothing yet
   }
@@ -395,7 +386,6 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
     // Do nothing, should have been handled by committer
   }
 
-  @Override
   public void commitDropTable(Table table, boolean deleteData) throws MetaException {
     if (!HiveUtils.isExternalTable(table) && deleteData) {
       // This is a managed table, so let's delete the table in BigQuery
@@ -409,17 +399,14 @@ public abstract class BigQueryMetaHookBase implements HiveMetaHook {
     }
   }
 
-  @Override
   public void rollbackCreateTable(Table table) throws MetaException {
     // Do nothing
   }
 
-  @Override
   public void preDropTable(Table table) throws MetaException {
     // Do nothing
   }
 
-  @Override
   public void rollbackDropTable(Table table) throws MetaException {
     // Do nothing
   }
