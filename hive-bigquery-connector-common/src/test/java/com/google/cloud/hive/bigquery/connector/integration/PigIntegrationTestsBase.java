@@ -73,8 +73,7 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
   @ParameterizedTest
   @MethodSource(EXECUTION_ENGINE_READ_FORMAT)
   public void testReadAllTypes(String engine, String readDataFormat) throws IOException {
-    // Note: HCatalog converts Hive dates and timestamps to local timezone.
-    // See:
+    // Note: HCatalog converts Hive dates and timestamps to local timezone. See:
     // https://cwiki.apache.org/confluence/display/hive/hcatalog+loadstore#HCatalogLoadStore-DataTypeMappings
     // So we use UTC to make the tests reproducible.
     System.getProperties().setProperty("user.timezone", "UTC");
@@ -197,10 +196,8 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
                 "(4.2,2019-03-18T01:23:45.678Z)",
                 // Note: HCatalog appears to not be able to load nested maps. For example, it
                 // would fail with data shaped like "[a_key#[a_subkey#888]]". So we keep it simple
-                // here
-                // and just test a map with a key and no value, as this is an issue with
-                // HCatalog/Pig,
-                // not with the connector.
+                // here and just test a map with a key and no value, as this is an issue with
+                // HCatalog/Pig, not with the connector.
                 "[mykey#]")),
         StandardCharsets.UTF_8);
     String inputType =
@@ -249,12 +246,12 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     assertEquals("var char", row.get(6).getStringValue());
     assertEquals("string", row.get(7).getStringValue());
     assertEquals("2019-03-18", row.get(8).getStringValue());
-    if (HiveVersionInfo.getVersion().startsWith("1.")) {
+    if (HiveVersionInfo.getVersion().startsWith("3.")) {
+      assertEquals("2000-01-01T00:23:45.123000", row.get(9).getStringValue());
+    } else {
       assertEquals(
           "2000-01-01T00:23:45.123Z",
           convertTimestampForOldVersionsOfHive(row.get(9).getStringValue()));
-    } else {
-      assertEquals("2000-01-01T00:23:45.123000", row.get(9).getStringValue());
     }
     assertArrayEquals("bytes".getBytes(), row.get(10).getBytesValue());
     assertEquals(2.0, row.get(11).getDoubleValue());
@@ -284,13 +281,12 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     assertEquals(
         4.199999809265137,
         struct.get("float_field").getDoubleValue()); // TODO: Address discrepancy here
-
-    if (HiveVersionInfo.getVersion().startsWith("1.")) {
+    if (HiveVersionInfo.getVersion().startsWith("3.")) {
+      assertEquals("2019-03-18T01:23:45.678000", struct.get("ts_field").getStringValue());
+    } else {
       assertEquals(
           "2019-03-18T01:23:45.678Z",
           convertTimestampForOldVersionsOfHive(struct.get("ts_field").getStringValue()));
-    } else {
-      assertEquals("2019-03-18T01:23:45.678000", struct.get("ts_field").getStringValue());
     }
     // Check the Map type
     FieldValueList map = (FieldValueList) row.get(17).getRepeatedValue();

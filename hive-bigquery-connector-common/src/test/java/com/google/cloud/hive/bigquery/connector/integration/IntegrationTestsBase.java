@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
@@ -142,6 +143,9 @@ public abstract class IntegrationTestsBase {
 
     // Restore the original system properties after each test
     System.setProperties(systemPropertiesBackup);
+
+    // Clear timezone cache
+    TimeZone.setDefault(null);
   }
 
   @AfterAll
