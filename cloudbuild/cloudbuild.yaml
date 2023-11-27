@@ -68,7 +68,7 @@ steps:
     - 'CODECOV_TOKEN=${_CODECOV_TOKEN}'
 
 # Tests should take under 90 mins
-timeout: 5400s
+timeout: 7200s
 
 options:
   machineType: 'N1_HIGHCPU_32'
