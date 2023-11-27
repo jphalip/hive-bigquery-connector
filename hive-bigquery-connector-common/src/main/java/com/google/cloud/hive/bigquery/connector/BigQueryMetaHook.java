@@ -46,7 +46,6 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;
-import org.apache.hadoop.hive.serde.serdeConstants;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector.Category;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.PrimitiveCategory;
@@ -186,20 +185,6 @@ public class BigQueryMetaHook {
     if (!Strings.isNullOrEmpty(table.getSd().getLocation())) {
       throw new MetaException("Cannot create table in BigQuery with a `location` property.");
     }
-
-    // Some environments rely on the "serialization.lib" table property instead of the
-    // storage handler's getSerDeClass() method to pick the SerDe, so we set it here.
-    table
-        .getParameters()
-        .put(
-            serdeConstants.SERIALIZATION_LIB,
-            "com.google.cloud.hive.bigquery.connector.BigQuerySerDe");
-    table
-        .getSd()
-        .setInputFormat("com.google.cloud.hive.bigquery.connector.input.BigQueryInputFormat");
-    table
-        .getSd()
-        .setOutputFormat("com.google.cloud.hive.bigquery.connector.output.BigQueryOutputFormat");
 
     Injector injector =
         Guice.createInjector(

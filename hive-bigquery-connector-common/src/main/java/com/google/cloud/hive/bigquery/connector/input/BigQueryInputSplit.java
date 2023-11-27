@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.cloud.bigquery.connector.common.*;
 import com.google.cloud.bigquery.storage.v1.ReadRowsRequest;
 import com.google.cloud.bigquery.storage.v1.ReadSession;
+import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModule;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
@@ -37,7 +38,6 @@ import java.util.*;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
-import org.apache.hadoop.hive.ql.exec.SerializationUtilities;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat.HiveInputSplit;
 import org.apache.hadoop.hive.ql.metadata.VirtualColumn;
 import org.apache.hadoop.hive.ql.plan.*;
@@ -214,7 +214,7 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
     ExprNodeGenericFuncDesc filterExpr;
     Optional<String> filter = Optional.empty();
     if (serializedFilterExpr != null) {
-      filterExpr = SerializationUtilities.deserializeExpression(serializedFilterExpr);
+      filterExpr = HiveCompat.getInstance().deserializeExpression(serializedFilterExpr);
       LOG.info("filter expression: {}", filterExpr);
       ExprNodeGenericFuncDesc translatedFilterExpr =
           (ExprNodeGenericFuncDesc) BigQueryFilters.translateFilters(filterExpr, jobConf);

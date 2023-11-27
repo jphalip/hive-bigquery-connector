@@ -83,6 +83,10 @@ public class HiveUtils {
     return table.getDbName() + "." + table.getTableName();
   }
 
+  public static String getDbTableName(org.apache.hadoop.hive.ql.metadata.Table table) {
+    return table.getDbName() + "." + table.getTableName();
+  }
+
   public static boolean enableCommitterInTez(Configuration conf) {
     String tezCommitter = conf.get("hive.tez.mapreduce.output.committer.class");
     return (tezCommitter != null

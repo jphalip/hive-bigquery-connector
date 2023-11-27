@@ -23,6 +23,8 @@ import java.time.*;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.avro.util.Utf8;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.TimestampWritable;
 import org.apache.hadoop.hive.serde2.lazy.LazyDate;
@@ -90,5 +92,10 @@ public class Hive1Compat extends HiveCompat {
       return timestampWritable;
     }
     return null;
+  }
+
+  @Override
+  public ExprNodeGenericFuncDesc deserializeExpression(String s) {
+    return Utilities.deserializeExpression(s);
   }
 }
