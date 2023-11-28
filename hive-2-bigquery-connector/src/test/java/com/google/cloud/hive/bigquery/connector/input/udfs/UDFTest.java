@@ -15,9 +15,10 @@
  */
 package com.google.cloud.hive.bigquery.connector.input.udfs;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.util.Arrays;
 import org.apache.hadoop.hive.ql.plan.ExprNodeConstantDesc;
-import org.apache.hadoop.hive.ql.udf.*;
 import org.apache.hadoop.hive.ql.udf.generic.*;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.junit.jupiter.api.Test;
