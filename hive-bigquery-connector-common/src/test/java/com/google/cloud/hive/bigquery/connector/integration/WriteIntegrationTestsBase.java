@@ -338,7 +338,6 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
     createExternalTable(
         ALL_TYPES_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL, BIGQUERY_ALL_TYPES_TABLE_DDL);
     // Insert data into the BQ table using Hive
-    // TODO: Figure out why Hive won't let us insert NULL values for some fields below
     runHiveQuery(
         String.join(
             "\n",
@@ -356,16 +355,22 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "NULL,",
             "NULL,",
             "NULL,",
-            "NAMED_STRUCT(",
+            // Note: Hive doesn't allow just passing "NULL" as a value for complex types,
+            // so we use a workaround using "IF(FALSE, ..., NULL)" as suggested here:
+            // https://issues.apache.org/jira/browse/HIVE-4022?focusedCommentId=14268625#comment-14268625
+            "IF(FALSE, NAMED_STRUCT(",
             "  'min', CAST(0.0 AS" + " DECIMAL(38,9)),",
             "  'max', CAST(0.0 AS" + " DECIMAL(38,9)),",
             "  'pi', CAST(0.0 AS DECIMAL(38,9)),",
             "  'big_pi', CAST(0.0 AS" + " DECIMAL(38,9))",
-            "),",
-            "ARRAY(CAST (1 AS BIGINT)),",
-            "ARRAY(NAMED_STRUCT('i', CAST (1 AS BIGINT))),",
-            "NAMED_STRUCT('float_field', CAST(0.0 AS FLOAT), 'ts_field', CAST ('' AS TIMESTAMP)),",
-            "MAP('mykey', MAP('subkey', 0))"));
+            "), NULL),",
+            "IF(FALSE, ARRAY(CAST (1 AS BIGINT)), NULL),",
+            "IF(FALSE, ARRAY(NAMED_STRUCT('i', CAST (1 AS BIGINT))), NULL),",
+            "IF(FALSE, NAMED_STRUCT('float_field', CAST(0.0 AS FLOAT), 'ts_field', CAST ('' AS TIMESTAMP)), NULL),",
+            "IF(FALSE, MAP('mykey', MAP('subkey', 0)), NULL)",
+            // Note: In old versions of Hive you need to use a dummy table here.
+            // See: https://issues.apache.org/jira/browse/HIVE-12200
+            "from (select 'a') dummy"));
     // Read the data using the BQ SDK
     TableResult result =
         runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", ALL_TYPES_TABLE_NAME));
@@ -374,7 +379,13 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
     List<FieldValueList> rows = Streams.stream(result.iterateAll()).collect(Collectors.toList());
     FieldValueList row = rows.get(0);
     assertEquals(18, row.size()); // Number of columns
-    // TODO: Verify the returned values
+    for (int i = 0; i < 14; i++) {
+      assertNull(row.get(i).getValue());
+    }
+    assertEquals(0, ((FieldValueList) row.get(14).getValue()).size());
+    assertEquals(0, ((FieldValueList) row.get(15).getValue()).size());
+    assertNull(row.get(16).getValue());
+    assertEquals(0, ((FieldValueList) row.get(17).getValue()).size());
   }
 
   // ---------------------------------------------------------------------------------------------------
@@ -407,7 +418,10 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
             "1,",
             "'james',",
             "NAMED_STRUCT('type', 'apartment', 'info', NAMED_STRUCT('units', 2, 'label', 'medium')),",
-            "MAP('mykey', MAP('subkey', 0))"));
+            "MAP('mykey', MAP('subkey', 0))",
+            // Note: In old versions of Hive you need to use a dummy table here.
+            // See: https://issues.apache.org/jira/browse/HIVE-12200
+            "from (select 'a') dummy"));
     // Read the data using the BQ SDK
     TableResult result = runBqQuery("SELECT * FROM `${dataset}.test_required`");
     // Verify we get the expected values
