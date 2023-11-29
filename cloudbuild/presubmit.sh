@@ -27,6 +27,7 @@ readonly ACTION=$1
 readonly HIVE1_PROFILE="hive1-generic"
 readonly HIVE2_PROFILE="hive2-generic"
 readonly HIVE3_PROFILE="hive3-generic"
+readonly HIVE2_SHADED_DEPS="shaded-deps-hive2.3.9-hadoop2.10.2"
 readonly HIVE3_SHADED_DEPS="shaded-deps-hive3.1.2-hadoop2.10.2"
 readonly MVN="./mvnw -B -e -Dmaven.repo.local=/workspace/.repository"
 
@@ -47,14 +48,16 @@ case "$ACTION" in
   build)
     # Install shaded dependencies for Spark SQL
     $MVN install -DskipTests -P sparksql -pl shaded-deps-sparksql
-    # Install all modules for Hive 2
-    $MVN install -DskipTests -P"${HIVE2_PROFILE},sparksql-integration"
-    # Install the shaded dependencies for Hive 3 (all the other shaded & parent modules have already been installed with the previous command)
+    # Install all modules for Hive 1
+    $MVN install -DskipTests -P"${HIVE1_PROFILE}"
+    # Install the shaded dependencies for Hive 2 (all the other shaded & parent modules have already been installed with the previous command)
+    $MVN install -DskipTests -P"${HIVE2_PROFILE},sparksql-integration"  -pl ${HIVE2_SHADED_DEPS}
+    # Install the shaded dependencies for Hive 3
     $MVN install -DskipTests -P"${HIVE3_PROFILE}" -pl ${HIVE3_SHADED_DEPS}
     exit
     ;;
 
-  # Run unit tests for Hive 1
+  # Run unit tests for Hive 1.x.x
   unittest_hive1)
     $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE1_PROFILE}",coverage
     # Upload test coverage report to Codecov
@@ -62,7 +65,7 @@ case "$ACTION" in
     exit
     ;;
 
-  # Run unit tests for Hive 2
+  # Run unit tests for Hive 2.x.x
   unittest_hive2)
     $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE2_PROFILE}",coverage
     # Upload test coverage report to Codecov
@@ -70,7 +73,7 @@ case "$ACTION" in
     exit
     ;;
 
-  # Run unit tests for Hive 3
+  # Run unit tests for Hive 3.x.x
   unittest_hive3)
     $MVN surefire:test jacoco:report jacoco:report-aggregate -P"${HIVE3_PROFILE}",coverage
     # Upload test coverage report to Codecov
@@ -78,7 +81,7 @@ case "$ACTION" in
     exit
     ;;
 
-  # Run integration tests for Hive 1
+  # Run integration tests for Hive 1.x.x
   integrationtest_hive1)
     $MVN failsafe:integration-test failsafe:verify jacoco:report jacoco:report-aggregate \
       -P"${HIVE1_PROFILE}",coverage,integration
@@ -87,7 +90,7 @@ case "$ACTION" in
     exit
     ;;
 
-  # Run integration tests for Hive 2
+  # Run integration tests for Hive 2.x.x
   integrationtest_hive2)
     $MVN failsafe:integration-test failsafe:verify jacoco:report jacoco:report-aggregate \
       -P"${HIVE2_PROFILE}",coverage,integration
@@ -96,7 +99,7 @@ case "$ACTION" in
     exit
     ;;
 
-  # Run integration tests for Hive 3
+  # Run integration tests for Hive 3.x.x
   integrationtest_hive3)
     $MVN failsafe:integration-test failsafe:verify jacoco:report jacoco:report-aggregate \
       -P"${HIVE3_PROFILE}",coverage,integration
