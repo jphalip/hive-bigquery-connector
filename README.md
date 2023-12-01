@@ -326,8 +326,6 @@ performance -- you can use it by setting the `hive.execution.engine=tez` configu
 Since BigQuery is [backed by a columnar datastore](https://cloud.google.com/blog/big-data/2016/04/inside-capacitor-bigquerys-next-generation-columnar-storage-format),
 it can efficiently stream data without reading all columns.
 
-Column pruning is currently supported in Hive 2 & 3, but not in Hive 1.
-
 ## Predicate pushdowns
 
 The connector supports predicate pushdowns to the BigQuery Storage Read API. This allows to filter
@@ -737,7 +735,6 @@ There are multiple options to override the default behavior and to provide custo
 * [Custom Hive UDFs](https://cwiki.apache.org/confluence/display/hive/hiveplugins) (aka Hive plugins) are currently not supported.
 * BigQuery [ingestion time partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#ingestion_time) is currently supported only for read operations.
 * BigQuery [integer range partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#integer_range) is currently not supported.
-* Column pruning is currently supported in Hive 2 & 3, but not in Hive 1.
 
 ## Development
 

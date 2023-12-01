@@ -186,8 +186,6 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
 
     Set<String> selectedFields;
     String engine = HiveConf.getVar(jobConf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE);
-    // TODO: In Hive 1, the Hive conf doesn't have a `hive.exec.plan` property, so we currently
-    // can't extract the selected fields from the MR job object, i.e. column pruning doesn't work.
     if (engine.equals("mr") && HiveUtils.isMRJob(jobConf)) {
       // To-Do: a workaround for HIVE-27115, remove when fix available.
       List<String> neededFields = getMRColumnProjections(jobConf);
@@ -297,22 +295,30 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
 
   // This is a workaround for HIVE-27115, used in MR mode.
   private static List<String> getMRColumnProjections(JobConf jobConf) {
-    String dir = jobConf.get("mapreduce.input.fileinputformat.inputdir");
-    Path path = new Path(dir);
+    String inputDir = jobConf.get("mapreduce.input.fileinputformat.inputdir");
+    MapWork mapWork = org.apache.hadoop.hive.ql.exec.Utilities.getMapWork(jobConf);
+    if (mapWork == null
+        || mapWork.getPathToAliases() == null
+        || mapWork.getPathToAliases().isEmpty()) {
+      return Collections.emptyList();
+    }
+    List<String> aliases = mapWork.getPathToAliases().get(new Path(inputDir));
+    if (aliases == null) {
+      // Another try in case we're using Hive 1.x.x, where `MapWork.getPathToAliases()` is a map of
+      // Strings instead of a map of Paths.
+      aliases = mapWork.getPathToAliases().get(inputDir);
+    }
+    if (aliases == null) {
+      return Collections.emptyList();
+    }
     try {
-      MapWork mapWork = org.apache.hadoop.hive.ql.exec.Utilities.getMapWork(jobConf);
-      if (mapWork == null
-          || mapWork.getPathToAliases() == null
-          || mapWork.getPathToAliases().isEmpty()) {
-        return Collections.emptyList();
-      }
-      String alias = mapWork.getPathToAliases().get(path).get(0);
+      String alias = aliases.get(0);
       TableScanDesc tableScanDesc = (TableScanDesc) mapWork.getAliasToWork().get(alias).getConf();
       return tableScanDesc.getNeededColumns();
     } catch (Exception e) {
-      LOG.warn("Not able to find column project from plan for {}", dir);
-      return Collections.emptyList();
     }
+    LOG.warn("Not able to find column project from plan for {}", inputDir);
+    return Collections.emptyList();
   }
 
   // Use reflection to avoid depending on un-shaded Guava ImmutableSet from
