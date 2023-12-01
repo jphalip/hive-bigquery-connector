@@ -15,11 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector;
 
-import com.google.cloud.hive.bigquery.connector.output.OutputCommitterUtils;
-import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
-import com.google.cloud.hive.bigquery.connector.utils.JobUtils.CleanUp;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
-import java.io.IOException;
 import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
@@ -32,27 +28,18 @@ import org.apache.hadoop.hive.ql.hooks.WriteEntity;
  * This means we cannot distinguish between an "INSERT" and "INSERT OVERWRITE" query in this hook.
  * So currently all types of inserts are considered the same way, i.e. as regular inserts.
  */
-public class PostExecHook implements ExecuteWithHookContext {
+public class CommitInsertHook implements ExecuteWithHookContext {
 
   @Override
   public void run(HookContext hookContext) throws Exception {
     for (WriteEntity entity : hookContext.getOutputs()) {
       if (!entity.getTable().getStorageHandler().getClass().equals(BigQueryStorageHandler.class)) {
+        // Not a BigQuery table, so skip it
         continue;
       }
-      try {
-        JobDetails jobDetails =
-            JobDetails.readJobDetailsFile(
-                hookContext.getConf(), HiveUtils.getDbTableName(entity.getTable()));
-        OutputCommitterUtils.commitJob(hookContext.getConf(), jobDetails);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      } finally {
-        // Delete the query work directory in case of other jobs using the same one.
-        JobUtils.safeCleanUp(
-            () -> JobUtils.deleteQueryWorkDirOnExit(hookContext.getConf()),
-            CleanUp.DELETE_QUERY_TEMPORARY_WORK_DIRECTORY);
-      }
+      String tableName = HiveUtils.getDbTableName(entity.getTable());
+      BigQueryMetaHook metahook = new BigQueryMetaHook(hookContext.getConf());
+      metahook.commitInsertTable(tableName);
     }
   }
 }

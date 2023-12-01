@@ -41,16 +41,19 @@ public abstract class WriteIntegrationTestsBase extends IntegrationTestsBase {
       initHive(engine, HiveBigQueryConfig.AVRO);
     }
     createExternalTable(TEST_TABLE_NAME, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
-    // Insert data using Hive
+    // Run two insert queries using Hive
     runHiveQuery("INSERT INTO " + TEST_TABLE_NAME + " VALUES (123, 'hello')");
+    runHiveQuery("INSERT INTO " + TEST_TABLE_NAME + " VALUES (789, 'abcd')");
     // Read the data using the BQ SDK
     TableResult result =
-        runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", TEST_TABLE_NAME));
+        runBqQuery(String.format("SELECT * FROM `${dataset}.%s` ORDER BY number", TEST_TABLE_NAME));
     // Verify we get the expected values
-    assertEquals(1, result.getTotalRows());
+    assertEquals(2, result.getTotalRows());
     List<FieldValueList> rows = Streams.stream(result.iterateAll()).collect(Collectors.toList());
     assertEquals(123L, rows.get(0).get(0).getLongValue());
     assertEquals("hello", rows.get(0).get(1).getStringValue());
+    assertEquals(789L, rows.get(1).get(0).getLongValue());
+    assertEquals("abcd", rows.get(1).get(1).getStringValue());
   }
 
   /** Insert data using the "direct" write method. */

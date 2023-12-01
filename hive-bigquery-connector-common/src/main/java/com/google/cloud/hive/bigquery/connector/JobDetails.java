@@ -120,9 +120,7 @@ public class JobDetails {
   public static JobDetails readJobDetailsFile(Configuration conf, String hmsDbTableName)
       throws IOException {
     Path jobDetailsFilePath = JobUtils.getJobDetailsFilePath(conf, hmsDbTableName);
-    String jsonString = FileSystemUtils.readFile(conf, jobDetailsFilePath);
-    Gson gson = new Gson();
-    return gson.fromJson(jsonString, JobDetails.class);
+    return readJobDetailsFile(conf, jobDetailsFilePath);
   }
 
   /** Reads the job's details file from the job's work path. */

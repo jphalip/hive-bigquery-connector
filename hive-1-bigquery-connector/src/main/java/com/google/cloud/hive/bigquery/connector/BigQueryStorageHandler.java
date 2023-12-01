@@ -17,7 +17,9 @@ package com.google.cloud.hive.bigquery.connector;
 
 import java.util.Map;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
+import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 
@@ -28,16 +30,30 @@ public class BigQueryStorageHandler extends BigQueryStorageHandlerBase {
     return new OldAPIMetaHook(conf);
   }
 
+  public void addExecHook(String hookType, Class<? extends ExecuteWithHookContext> hookCLass) {
+    String hooks = conf.get(hookType, "").trim();
+    if (!hooks.contains(hookCLass.getName())) {
+      hooks = hooks.isEmpty() ? hookCLass.getName() : hooks + "," + hookCLass.getName();
+      conf.set(hookType, hooks);
+    }
+  }
+
   @Override
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
     super.configureOutputJobProperties(tableDesc, jobProperties);
+
+    // In Hive 1, the metahook doesn't have a `preInsertTable()` method, so we use a pre-execution
+    // hook instead
+    addExecHook(ConfVars.PREEXECHOOKS.varname, PreInsertHook.class);
+
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
     if ((engine.equals("tez"))) {
       // Tez does not make use of the OutputCommitter (regardless of the Hive versions).
       // So with Hive 2 and 3, we override and use the metahook's `commitInsertTable()` method.
       // However, with Hive 1, that method isn't available. So we set up a post execution hook to
       // commit the writes.
-      conf.set("hive.exec.post.hooks", PostExecHook.class.getName());
+      addExecHook(ConfVars.POSTEXECHOOKS.varname, CommitInsertHook.class);
+
       // TODO: Define a hook in `hive.exec.failure.hooks` to trigger the output committer's
       // `abortJob()` method.
     }

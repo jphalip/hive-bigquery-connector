@@ -26,7 +26,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 
 /** Various filesystem utilities. */
 public class FileSystemUtils {
@@ -49,6 +51,27 @@ public class FileSystemUtils {
         continue;
       }
       filePaths.add(fileStatus.getPath().toString());
+    }
+    return filePaths;
+  }
+
+  /**
+   * Searches recursively through the given path and returns the files that have the given file name
+   */
+  public static List<Path> findFilesRecursively(Configuration conf, Path dir, String fileName)
+      throws IOException {
+    FileSystem fs = dir.getFileSystem(conf);
+    List<Path> filePaths = new ArrayList<>();
+    try {
+      RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(dir, true);
+      while (fileStatusIterator.hasNext()) {
+        FileStatus fileStatus = fileStatusIterator.next();
+        if (fileStatus.getLen() > 0 && fileStatus.getPath().getName().equals(fileName)) {
+          filePaths.add(fileStatus.getPath());
+        }
+      }
+    } catch (FileNotFoundException e) {
+      // Ignore errors
     }
     return filePaths;
   }

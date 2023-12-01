@@ -15,21 +15,8 @@
  */
 package com.google.cloud.hive.bigquery.connector.integration;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
 public class WriteIntegrationTests extends WriteIntegrationTestsBase {
 
-  // Other tests are from the super-class
+  // Tests are from the super-class
 
-  @Disabled("Insert overwrite is currently not supported for Hive 1")
-  @ParameterizedTest
-  @MethodSource(EXECUTION_ENGINE_WRITE_METHOD)
-  public void testOverwriteITAS(String engine, String writeMethod) {}
-
-  @Disabled("Insert overwrite is currently not supported for Hive 1")
-  @ParameterizedTest
-  @MethodSource(EXECUTION_ENGINE_WRITE_METHOD)
-  public void testInsertOverwrite(String engine, String writeMethod) {}
 }

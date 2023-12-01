@@ -738,9 +738,6 @@ There are multiple options to override the default behavior and to provide custo
 * BigQuery [ingestion time partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#ingestion_time) is currently supported only for read operations.
 * BigQuery [integer range partitioning](https://cloud.google.com/bigquery/docs/partitioned-tables#integer_range) is currently not supported.
 * Column pruning is currently supported in Hive 2 & 3, but not in Hive 1.
-* `INSERT OVERWRITE` is currently supported in Hive 2 & 3, but not in Hive 1. In Hive 1,
-  `INSERT OVERWRITE` currently acts as a regular `INSERT`, i.e. it appends data to a table without
-  clearing its previous contents first.
 
 ## Development
 

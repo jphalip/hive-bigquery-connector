@@ -82,6 +82,10 @@ public class BigQueryMetaHook {
           PrimitiveCategory.STRING,
           PrimitiveCategory.DECIMAL);
 
+  public BigQueryMetaHook(Configuration conf) {
+    this(conf, null);
+  }
+
   public BigQueryMetaHook(Configuration conf, MetahookExtension extension) {
     this.conf = conf;
     this.extension = extension;
@@ -103,7 +107,7 @@ public class BigQueryMetaHook {
       validateTypeInfo(mapValueTypeInfo);
     } else if (typeInfo.getCategory() == Category.PRIMITIVE) {
       PrimitiveCategory primitiveCategory = ((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory();
-      if (!extension.getSupportedTypes().contains(primitiveCategory)) {
+      if (extension != null && !extension.getSupportedTypes().contains(primitiveCategory)) {
         throw new MetaException("Unsupported Hive type: " + typeInfo.getTypeName());
       }
     } else {
@@ -198,7 +202,9 @@ public class BigQueryMetaHook {
         basicStats.put(StatsSetupConst.COLUMN_STATS_ACCURATE, "{\"BASIC_STATS\":\"true\"}");
         table.getParameters().putAll(basicStats);
       } else {
-        extension.setupStats(table);
+        if (extension != null) {
+          extension.setupStats(table);
+        }
       }
 
       return;
@@ -229,7 +235,9 @@ public class BigQueryMetaHook {
       if (partitionField.isPresent()) {
         tpBuilder.setField(partitionField.get());
       } else {
-        extension.setupIngestionTimePartitioning(table);
+        if (extension != null) {
+          extension.setupIngestionTimePartitioning(table);
+        }
       }
       OptionalLong partitionExpirationMs = opts.getPartitionExpirationMs();
       if (partitionExpirationMs.isPresent()) {
@@ -284,36 +292,14 @@ public class BigQueryMetaHook {
     // Do nothing yet
   }
 
-  /**
-   * Called before insert query. It is only called by Hive 2 & 3. Spark, HCatalog, and Hive 1 do not
-   * call it.
-   */
-  public void preInsertTable(Table table, boolean overwrite) throws MetaException {
-    Map<String, String> tableParameters = table.getParameters();
+  public static void makeOverwrite(Configuration conf, JobDetails jobDetails) {
+    jobDetails.setOverwrite(true);
     Injector injector =
         Guice.createInjector(
-            new BigQueryClientModule(), new HiveBigQueryConnectorModule(conf, tableParameters));
+            new BigQueryClientModule(),
+            new HiveBigQueryConnectorModule(conf, jobDetails.getTableProperties()));
     BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
     HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
-
-    // Load the job details file from HDFS
-    JobDetails jobDetails;
-    String hmsDbTableName = HiveUtils.getDbTableName(table);
-    Path jobDetailsFilePath = JobUtils.getJobDetailsFilePath(conf, hmsDbTableName);
-    try {
-      jobDetails = JobDetails.readJobDetailsFile(conf, jobDetailsFilePath);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    TableId destTableId =
-        BigQueryUtil.parseTableId(tableParameters.get(HiveBigQueryConfig.TABLE_KEY));
-
-    if (jobDetails.getTableId() == null) {
-      jobDetails.setTableId(destTableId);
-    }
-    jobDetails.setOverwrite(overwrite);
-
     if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
       // Special case: 'INSERT OVERWRITE' operation while using the 'direct'
       // write method. In this case, we will stream-write to a temporary table
@@ -323,23 +309,41 @@ public class BigQueryMetaHook {
       // uses the 'WRITE_TRUNCATE' option available in the BigQuery Load Job API when
       // loading the Avro files into the BigQuery table (see more about that in the
       // `IndirectOutputCommitter` class).
-      if (overwrite) {
-        // Set the final destination table as the job's original table
-        jobDetails.setFinalTableId(destTableId);
-        // Create a temporary table with the same schema
-        // TODO: It'd be useful to add a description to the table explaining that it was
-        //  created as a temporary table for a Hive query.
-        TableInfo tempTableInfo =
-            bqClient.createTempTable(
-                TableId.of(
-                    destTableId.getProject(),
-                    destTableId.getDataset(),
-                    destTableId.getTable() + "-" + HiveUtils.getQueryId(conf) + "-"),
-                jobDetails.getBigquerySchema());
-        // Set the temp table as the job's output table
-        jobDetails.setTableId(tempTableInfo.getTableId());
-        LOG.info("Insert overwrite temporary table {} ", tempTableInfo.getTableId());
-      }
+
+      // Set the final destination table as the job's original table
+      TableId destTableId = jobDetails.getTableId();
+      jobDetails.setFinalTableId(destTableId);
+      // Create a temporary table with the same schema
+      // TODO: It'd be useful to add a description to the table explaining that it was
+      //  created as a temporary table for a Hive query.
+      TableInfo tempTableInfo =
+          bqClient.createTempTable(
+              TableId.of(
+                  destTableId.getProject(),
+                  destTableId.getDataset(),
+                  destTableId.getTable() + "-" + HiveUtils.getQueryId(conf) + "-"),
+              jobDetails.getBigquerySchema());
+      // Set the temp table as the job's output table
+      jobDetails.setTableId(tempTableInfo.getTableId());
+      LOG.info("Insert overwrite temporary table {} ", tempTableInfo.getTableId());
+    }
+  }
+
+  /**
+   * Called before insert query. It is only called by Hive 2 & 3. Spark, HCatalog, and Hive 1 do not
+   * call it.
+   */
+  public void preInsertTable(String table, boolean overwrite) throws MetaException {
+    // Load the job details file from HDFS
+    JobDetails jobDetails;
+    Path jobDetailsFilePath = JobUtils.getJobDetailsFilePath(conf, table);
+    try {
+      jobDetails = JobDetails.readJobDetailsFile(conf, jobDetailsFilePath);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    if (overwrite) {
+      makeOverwrite(conf, jobDetails);
     }
     JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);
   }
@@ -349,12 +353,11 @@ public class BigQueryMetaHook {
    * execution engine. This method is not systematically called when using "mr" -- for that, see
    * {@link BigQueryOutputCommitter#commitJob(JobContext)}
    */
-  public void commitInsertTable(Table table, boolean overwrite) throws MetaException {
+  public void commitInsertTable(String table) throws MetaException {
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
     if (engine.equals("tez")) {
       try {
-        JobDetails jobDetails =
-            JobDetails.readJobDetailsFile(conf, HiveUtils.getDbTableName(table));
+        JobDetails jobDetails = JobDetails.readJobDetailsFile(conf, table);
         OutputCommitterUtils.commitJob(conf, jobDetails);
       } catch (IOException e) {
         throw new RuntimeException(e);

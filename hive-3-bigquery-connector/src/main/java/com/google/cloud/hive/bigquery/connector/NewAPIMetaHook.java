@@ -16,6 +16,7 @@
 package com.google.cloud.hive.bigquery.connector;
 
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
+import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -72,12 +73,12 @@ public class NewAPIMetaHook extends DefaultHiveMetaHook implements MetahookExten
 
   @Override
   public void commitInsertTable(Table table, boolean overwrite) throws MetaException {
-    metahook.commitInsertTable(table, overwrite);
+    metahook.commitInsertTable(HiveUtils.getDbTableName(table));
   }
 
   @Override
   public void preInsertTable(Table table, boolean overwrite) throws MetaException {
-    metahook.preInsertTable(table, overwrite);
+    metahook.preInsertTable(HiveUtils.getDbTableName(table), overwrite);
   }
 
   @Override
