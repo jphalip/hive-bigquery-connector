@@ -19,6 +19,7 @@ import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.bigquery.*;
+import com.google.cloud.hive.bigquery.connector.TestLogAppender;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.storage.Blob;
@@ -41,6 +42,8 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.tez.mapreduce.hadoop.MRJobConfig;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,6 +71,10 @@ public abstract class IntegrationTestsBase {
   protected static final String NON_EXISTING_PATH = "gs://random-x8e0dAfe";
   protected static final String TEMP_GCS_DIR_PREFIX = "temp-integration-test/";
   protected String tempGcsDir = TEMP_GCS_DIR_PREFIX;
+
+  // Logging
+  Level originalLogLevel;
+  protected TestLogAppender testLogAppender = new TestLogAppender();
 
   @HiveSQL(
       files = {},
@@ -100,6 +107,8 @@ public abstract class IntegrationTestsBase {
 
   @BeforeEach
   public void setUpEach(TestInfo testInfo) {
+    originalLogLevel = Logger.getRootLogger().getLevel();
+
     // Save the current state of system properties before each test
     systemPropertiesBackup = new Properties();
     Enumeration<?> propertyNames = System.getProperties().propertyNames();
@@ -137,6 +146,12 @@ public abstract class IntegrationTestsBase {
 
   @AfterEach
   public void tearDownEach(TestInfo testInfo) {
+    // Restore logging settings
+    Logger rootLogger = Logger.getRootLogger();
+    rootLogger.setLevel(originalLogLevel);
+    rootLogger.removeAppender(testLogAppender);
+    testLogAppender.clear();
+
     // Clean up GCS
     if (tempGcsDir != null && tempGcsDir.startsWith(TEMP_GCS_DIR_PREFIX)) {
       emptyGcsDir(testBucketName, tempGcsDir);
@@ -161,6 +176,22 @@ public abstract class IntegrationTestsBase {
     params.put("connection", getBigLakeConnection());
     params.put("test_bucket", "gs://" + testBucketName);
     return StrSubstitutor.replace(queryTemplate, params, "${", "}");
+  }
+
+  public void initLoggingCapture(Level level) {
+    Logger rootLogger = Logger.getRootLogger();
+    rootLogger.setLevel(level);
+    rootLogger.addAppender(testLogAppender);
+  }
+
+  public void clearLogs() {
+    testLogAppender.clear();
+  }
+
+  public void assertLogsContain(String s) {
+    assertTrue(
+        testLogAppender.getLogs().stream()
+            .anyMatch(event -> event.getRenderedMessage().contains(s)));
   }
 
   public void createPureHiveTable(String tableName, String hiveDDL) {

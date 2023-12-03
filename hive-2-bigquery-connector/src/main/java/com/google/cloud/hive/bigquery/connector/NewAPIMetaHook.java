@@ -26,7 +26,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector.Pr
 
 /**
  * Implementation of the Hive MetaHook that inherits from `DefaultHiveMetaHook`, which is available
- * in newer versions of Hive. This allows to use methods like `preInsertTable()`.
+ * in Hive 2 & 3. This allows to use methods like `preInsertTable()`.
  */
 public class NewAPIMetaHook extends DefaultHiveMetaHook implements MetahookExtension {
 

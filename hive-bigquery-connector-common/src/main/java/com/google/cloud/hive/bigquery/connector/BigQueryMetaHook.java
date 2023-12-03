@@ -348,8 +348,8 @@ public class BigQueryMetaHook {
 
   /**
    * This method is called automatically at the end of a successful job when using the "tez"
-   * execution engine. This method is not systematically called when using "mr" -- for that, see
-   * {@link BigQueryOutputCommitter#commitJob(JobContext)}
+   * execution engine in Hive 2 & 3. When using "mr", or "Tez" with Hive 1, Spark, or HCatalog, the
+   * {@link BigQueryOutputCommitter#commitJob(JobContext)} method is called instead.
    */
   public void commitInsertTable(String table) throws MetaException {
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();

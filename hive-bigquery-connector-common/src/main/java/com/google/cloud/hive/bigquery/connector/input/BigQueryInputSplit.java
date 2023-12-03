@@ -184,6 +184,7 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
     // BigQuery column names are case insensitive, hive colum names are lower cased
     columnNames.replaceAll(String::toLowerCase);
 
+    // Figure out which columns to select from the table
     Set<String> selectedFields;
     String engine = HiveConf.getVar(jobConf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE);
     if (engine.equals("mr") && HiveUtils.isMRJob(jobConf)) {
@@ -206,6 +207,14 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
     if (found) {
       selectedFields.add(HiveBigQueryConfig.PARTITION_DATE_PSEUDO_COLUMN);
     }
+
+    LOG.info(
+        String.format(
+            "Selecting column(s) (%s) from table `%s.%s.%s`",
+            String.join(",", selectedFields),
+            opts.getTableId().getProject(),
+            opts.getTableId().getDataset(),
+            opts.getTableId().getTable()));
 
     // If possible, translate filters to be compatible with BigQuery
     String serializedFilterExpr = jobConf.get(TableScanDesc.FILTER_EXPR_CONF_STR);

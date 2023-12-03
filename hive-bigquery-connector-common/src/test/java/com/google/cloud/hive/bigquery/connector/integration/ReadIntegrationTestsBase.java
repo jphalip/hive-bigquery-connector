@@ -24,6 +24,7 @@ import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import java.io.IOException;
 import java.util.*;
 import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.log4j.Level;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.junit.jupiter.api.Test;
@@ -99,7 +100,6 @@ public abstract class ReadIntegrationTestsBase extends IntegrationTestsBase {
   @ParameterizedTest
   @MethodSource(EXECUTION_ENGINE)
   public void testSelectExplicitColumns(String engine) {
-    engine = "mr";
     initHive(engine);
     createExternalTable(TEST_TABLE_NAME, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
     // Insert data into BQ using the BQ SDK
@@ -108,12 +108,20 @@ public abstract class ReadIntegrationTestsBase extends IntegrationTestsBase {
             "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", TEST_TABLE_NAME));
     TableResult result =
         runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", TEST_TABLE_NAME));
+    // Enable logging capture
+    initLoggingCapture(Level.INFO);
     // Make sure the initial data is there
     assertEquals(2, result.getTotalRows());
     // Read filtered data using Hive
     // Try with both columns in order
     List<Object[]> rows =
         runHiveQuery(String.format("SELECT number, text FROM %s ORDER BY number", TEST_TABLE_NAME));
+    String logTemplate =
+        String.format(
+            "Selecting column(s) (%%s) from table `%s.%s.%s`",
+            getProject(), dataset, TEST_TABLE_NAME);
+    assertLogsContain(String.format(logTemplate, "number,text"));
+    clearLogs();
     assertArrayEquals(
         new Object[] {
           new Object[] {123L, "hello"},
@@ -123,6 +131,8 @@ public abstract class ReadIntegrationTestsBase extends IntegrationTestsBase {
     // Try in different order
     rows =
         runHiveQuery(String.format("SELECT text, number FROM %s ORDER BY number", TEST_TABLE_NAME));
+    assertLogsContain(String.format(logTemplate, "number,text"));
+    clearLogs();
     assertArrayEquals(
         new Object[] {
           new Object[] {"hello", 123L},
@@ -131,9 +141,13 @@ public abstract class ReadIntegrationTestsBase extends IntegrationTestsBase {
         rows.toArray());
     // Try a single column
     rows = runHiveQuery(String.format("SELECT number FROM %s ORDER BY number", TEST_TABLE_NAME));
+    assertLogsContain(String.format(logTemplate, "number"));
+    clearLogs();
     assertArrayEquals(new Object[] {new Object[] {123L}, new Object[] {999L}}, rows.toArray());
     // Try another single column
     rows = runHiveQuery(String.format("SELECT text FROM %s ORDER BY text", TEST_TABLE_NAME));
+    assertLogsContain(String.format(logTemplate, "text"));
+    clearLogs();
     assertArrayEquals(new Object[] {new Object[] {"abcd"}, new Object[] {"hello"}}, rows.toArray());
   }
 

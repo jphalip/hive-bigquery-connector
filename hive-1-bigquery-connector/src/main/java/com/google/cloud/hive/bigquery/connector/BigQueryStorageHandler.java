@@ -35,13 +35,13 @@ public class BigQueryStorageHandler extends BigQueryStorageHandlerBase {
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
     super.configureOutputJobProperties(tableDesc, jobProperties);
 
-    // In Hive 1, the metahook doesn't have a `preInsertTable()` method, so we use a pre-execution
-    // hook instead
+    // In Hive 1, the metahook doesn't have a `preInsertTable()` method, so we use a
+    // pre-execution hook instead
     addExecHook(ConfVars.PREEXECHOOKS.varname, PreInsertHook.class);
 
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
     if ((engine.equals("tez"))) {
-      // Tez does not make use of the OutputCommitter (regardless of the Hive versions).
+      // Tez does not use the OutputCommitter (regardless of the Hive versions).
       // So with Hive 2 and 3, we override and use the metahook's `commitInsertTable()` method.
       // However, with Hive 1, that method isn't available. So we set up a post execution hook to
       // commit the writes.
