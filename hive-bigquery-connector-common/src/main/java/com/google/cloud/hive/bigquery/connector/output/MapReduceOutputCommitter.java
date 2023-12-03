@@ -26,7 +26,7 @@ public class MapReduceOutputCommitter extends OutputCommitter {
 
   @Override
   public void commitJob(org.apache.hadoop.mapreduce.JobContext jobContext) throws IOException {
-    BigQueryOutputCommitter.commitJob(jobContext.getConfiguration());
+    OutputCommitterUtils.commitJob(jobContext.getConfiguration());
     super.commitJob(jobContext);
   }
 

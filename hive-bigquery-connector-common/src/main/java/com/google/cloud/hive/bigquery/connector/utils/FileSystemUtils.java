@@ -33,6 +33,19 @@ import org.apache.hadoop.fs.RemoteIterator;
 /** Various filesystem utilities. */
 public class FileSystemUtils {
 
+  public static void deleteIfEmpty(Configuration conf, Path dir) throws IOException {
+    FileSystem fs = dir.getFileSystem(conf);
+    FileStatus[] fileStatuses;
+    try {
+      fileStatuses = fs.listStatus(dir);
+    } catch (FileNotFoundException e) {
+      return;
+    }
+    if (fileStatuses.length == 0) {
+      fs.delete(dir, true);
+    }
+  }
+
   /** Retrieves the list of files that are in the given directory. */
   public static List<String> getFiles(
       Configuration conf, Path dir, String namePrefix, String extension) throws IOException {
@@ -79,9 +92,7 @@ public class FileSystemUtils {
   /** Delete the given directory */
   public static void deleteDir(Configuration conf, Path dir) throws IOException {
     FileSystem fs = dir.getFileSystem(conf);
-    if (fs.exists(dir)) {
-      fs.delete(dir);
-    }
+    fs.delete(dir, true);
   }
 
   /** Utility to read a file from disk. */

@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector;
+package com.google.cloud.hive.bigquery.connector.output;
 
+import com.google.cloud.hive.bigquery.connector.BigQueryMetaHook;
+import com.google.cloud.hive.bigquery.connector.BigQueryStorageHandler;
+import com.google.cloud.hive.bigquery.connector.JobDetails;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.utils.FileSystemUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;

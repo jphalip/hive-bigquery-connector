@@ -48,12 +48,8 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampLocalTZO
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.TimestampObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.TimestampLocalTZTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class Hive3Compat extends HiveCompat {
-
-  private static final Logger LOG = LoggerFactory.getLogger(Hive3Compat.class);
 
   public Object convertHiveTimeUnitToBq(
       ObjectInspector objectInspector, Object hiveValue, String writeMethod) {

@@ -29,7 +29,6 @@ import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConnectorModu
 import com.google.cloud.hive.bigquery.connector.output.BigQueryOutputCommitter;
 import com.google.cloud.hive.bigquery.connector.output.OutputCommitterUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
-import com.google.cloud.hive.bigquery.connector.utils.JobUtils.CleanUp;
 import com.google.cloud.hive.bigquery.connector.utils.bq.BigQuerySchemaConverter;
 import com.google.cloud.hive.bigquery.connector.utils.bq.BigQueryUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
@@ -275,13 +274,13 @@ public class BigQueryMetaHook {
         }
         JobDetails jobDetails = JobDetails.readJobDetailsFile(conf, hmsDbTableName);
         jobDetails.setBigquerySchema(tableSchema);
-        if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
+        if (jobDetails.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
           BigQueryStorageHandlerBase.configureJobDetailsForIndirectWrite(
               opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
         }
-        Path queryTempOutputPath = JobUtils.getQueryTempOutputPath(conf, opts);
-        jobDetails.setJobTempOutputPath(new Path(queryTempOutputPath, hmsDbTableName));
-        JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);
+        Path queryTempOutputPath = JobUtils.getQueryTempOutputPath(conf, opts, hmsDbTableName);
+        jobDetails.setJobTempOutputPath(queryTempOutputPath);
+        jobDetails.writeFile(conf);
       }
     } catch (IOException e) {
       LOG.warn("Can not update jobDetails for table {}", hmsDbTableName);
@@ -299,8 +298,7 @@ public class BigQueryMetaHook {
             new BigQueryClientModule(),
             new HiveBigQueryConnectorModule(conf, jobDetails.getTableProperties()));
     BigQueryClient bqClient = injector.getInstance(BigQueryClient.class);
-    HiveBigQueryConfig opts = injector.getInstance(HiveBigQueryConfig.class);
-    if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
+    if (jobDetails.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
       // Special case: 'INSERT OVERWRITE' operation while using the 'direct'
       // write method. In this case, we will stream-write to a temporary table
       // and then finally overwrite the final destination table with the temporary
@@ -345,7 +343,7 @@ public class BigQueryMetaHook {
     if (overwrite) {
       makeOverwrite(conf, jobDetails);
     }
-    JobDetails.writeJobDetailsFile(conf, jobDetailsFilePath, jobDetails);
+    jobDetails.writeFile(conf);
   }
 
   /**
@@ -361,11 +359,6 @@ public class BigQueryMetaHook {
         OutputCommitterUtils.commitJob(conf, jobDetails);
       } catch (IOException e) {
         throw new RuntimeException(e);
-      } finally {
-        // delete the query work directory in case of other jobs using the same one.
-        JobUtils.safeCleanUp(
-            () -> JobUtils.deleteQueryWorkDirOnExit(conf),
-            CleanUp.DELETE_QUERY_TEMPORARY_WORK_DIRECTORY);
       }
     }
   }

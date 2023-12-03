@@ -258,5 +258,7 @@ public class SparkSQLIntegrationTests extends IntegrationTestsBase {
     FieldValueList subEntry = entry.get(1).getRepeatedValue().get(0).getRecordValue();
     assertEquals("subkey", subEntry.get(0).getStringValue());
     assertEquals(999, subEntry.get(1).getLongValue());
+    // Make sure things are correctly cleaned up
+    checkThatWorkDirsHaveBeenCleaned();
   }
 }

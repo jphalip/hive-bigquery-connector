@@ -15,11 +15,12 @@
  */
 package com.google.cloud.hive.bigquery.connector;
 
+import com.google.cloud.hive.bigquery.connector.output.PostExecHook;
+import com.google.cloud.hive.bigquery.connector.output.PreInsertHook;
 import java.util.Map;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
-import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 import org.apache.hadoop.hive.serde2.AbstractSerDe;
 
@@ -28,14 +29,6 @@ public class BigQueryStorageHandler extends BigQueryStorageHandlerBase {
   @Override
   public HiveMetaHook getMetaHook() {
     return new OldAPIMetaHook(conf);
-  }
-
-  public void addExecHook(String hookType, Class<? extends ExecuteWithHookContext> hookCLass) {
-    String hooks = conf.get(hookType, "").trim();
-    if (!hooks.contains(hookCLass.getName())) {
-      hooks = hooks.isEmpty() ? hookCLass.getName() : hooks + "," + hookCLass.getName();
-      conf.set(hookType, hooks);
-    }
   }
 
   @Override
@@ -52,10 +45,7 @@ public class BigQueryStorageHandler extends BigQueryStorageHandlerBase {
       // So with Hive 2 and 3, we override and use the metahook's `commitInsertTable()` method.
       // However, with Hive 1, that method isn't available. So we set up a post execution hook to
       // commit the writes.
-      addExecHook(ConfVars.POSTEXECHOOKS.varname, CommitInsertHook.class);
-
-      // TODO: Define a hook in `hive.exec.failure.hooks` to trigger the output committer's
-      // `abortJob()` method.
+      addExecHook(ConfVars.POSTEXECHOOKS.varname, PostExecHook.class);
     }
   }
 

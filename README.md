@@ -721,10 +721,6 @@ There are multiple options to override the default behavior and to provide custo
   sections on [partitioning](#partitioning) and [clustering](#clustering).
 * CTAS (aka `CREATE TABLE AS SELECT`) and CTLT (`CREATE TABLE LIKE TABLE`) statements are currently
   not supported.
-* If a write job fails when using the Tez execution engine and the `indirect` write method, the
-  temporary avro files might not be automatically cleaned up from the GCS bucket. The MR execution
-  engine does not have this limitation. The temporary files are always cleaned up when the job is
-  successful, regardless of the execution engine in use.
 * If you use the Hive `MAP` type, then the map's key must be of `STRING` type if you use the Avro
   format for reading or the indirect method for writing. This is because Avro requires keys to be
   strings. If you use the Arrow format for reading (default) and the direct method for writing (also

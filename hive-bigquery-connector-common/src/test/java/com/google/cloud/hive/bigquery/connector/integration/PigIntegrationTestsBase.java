@@ -279,5 +279,7 @@ public abstract class PigIntegrationTestsBase extends IntegrationTestsBase {
     FieldValueList entry = map.get(0).getRecordValue();
     assertEquals("mykey", entry.get(0).getStringValue());
     assertEquals(0, entry.get(1).getRepeatedValue().size());
+    // Make sure things are correctly cleaned up
+    checkThatWorkDirsHaveBeenCleaned();
   }
 }

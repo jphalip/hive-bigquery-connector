@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector;
+package com.google.cloud.hive.bigquery.connector.output;
 
+import com.google.cloud.hive.bigquery.connector.BigQueryMetaHook;
+import com.google.cloud.hive.bigquery.connector.BigQueryStorageHandler;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
 import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
@@ -28,7 +30,7 @@ import org.apache.hadoop.hive.ql.hooks.WriteEntity;
  * This means we cannot distinguish between an "INSERT" and "INSERT OVERWRITE" query in this hook.
  * So currently all types of inserts are considered the same way, i.e. as regular inserts.
  */
-public class CommitInsertHook implements ExecuteWithHookContext {
+public class PostExecHook implements ExecuteWithHookContext {
 
   @Override
   public void run(HookContext hookContext) throws Exception {

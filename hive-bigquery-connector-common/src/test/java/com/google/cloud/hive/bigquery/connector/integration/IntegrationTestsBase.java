@@ -20,10 +20,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.bigquery.*;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
+import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
+import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.StorageException;
 import com.klarna.hiverunner.HiveRunnerExtension;
 import com.klarna.hiverunner.HiveShell;
 import com.klarna.hiverunner.annotations.HiveSQL;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -302,6 +305,28 @@ public abstract class IntegrationTestsBase {
 
     hive.start();
     runHiveQuery("CREATE DATABASE source_db");
+  }
+
+  public void checkThatWorkDirsHaveBeenCleaned() {
+    File[] files = (new File(hive.getHiveConf().get("hadoop.tmp.dir"))).listFiles();
+    // Only tolerate the presence of a "mapred" folder, where MapReduce stores its
+    // own work files
+    if (files.length > 0) {
+      assertEquals(1, files.length);
+      assertEquals("mapred", files[0].getName());
+    }
+    // Check that the Avro files have been cleaned up for the indirect write method
+    if (hive.getHiveConf()
+        .get(HiveBigQueryConfig.WRITE_METHOD_KEY)
+        .equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
+      String tmpGcsPath = hive.getHiveConf().get(HiveBigQueryConfig.TEMP_GCS_PATH_KEY);
+      String bucketName = JobUtils.extractBucketNameFromGcsUri(tmpGcsPath);
+      String dirName = tmpGcsPath.replaceFirst("gs://" + bucketName + "/", "");
+      List<Blob> blobs = getBlobs(bucketName, dirName);
+      // Check that all that's left is the temp output directory itself
+      assertEquals(1, blobs.size());
+      assertEquals(dirName + "/", blobs.get(0).getName());
+    }
   }
 
   protected static String getDefaultExecutionEngine() {
