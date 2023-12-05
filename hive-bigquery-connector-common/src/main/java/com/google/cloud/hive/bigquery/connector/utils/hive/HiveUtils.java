@@ -15,6 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.utils.hive;
 
+import com.google.cloud.hive.bigquery.connector.utils.sparksql.SparkSQLUtils;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -57,10 +58,6 @@ public class HiveUtils {
   public static String[] getReadColumnNames(Configuration conf) {
     String colNames = conf.get("hive.io.file.readcolumn.names", "");
     return colNames != null && !colNames.isEmpty() ? colNames.split(",") : new String[0];
-  }
-
-  public static boolean isSparkJob(Configuration conf) {
-    return conf.get("spark.app.id", "").length() != 0;
   }
 
   public static String getQueryId(Configuration conf) {
@@ -107,7 +104,7 @@ public class HiveUtils {
   }
 
   public static String getTaskID(Configuration conf) {
-    if (isSparkJob(conf)) {
+    if (SparkSQLUtils.isSparkJob(conf)) {
       return getSparkTaskID();
     }
     return getHiveTaskAttemptIDWrapper(conf).getTaskID().toString();

@@ -15,6 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.sparksql;
 
+import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
 import static com.google.cloud.hive.bigquery.connector.sparksql.SparkTestUtils.DerbyDiskDB;
 import static com.google.cloud.hive.bigquery.connector.sparksql.SparkTestUtils.getSparkSession;
 import static org.junit.jupiter.api.Assertions.*;
@@ -164,6 +165,8 @@ public class SparkSQLIntegrationTests extends IntegrationTestsBase {
   public void testWriteAllTypes(String engine, String writeMethod) {
     DerbyDiskDB derby = new DerbyDiskDB(hive);
     System.getProperties().setProperty(HiveBigQueryConfig.WRITE_METHOD_KEY, writeMethod);
+    System.getProperties()
+        .setProperty("spark.sql.extensions", HiveBigQuerySparkExtensions.class.getName());
     initHive(engine, HiveBigQueryConfig.AVRO);
     // Create the BQ table
     createExternalTable(
@@ -258,6 +261,38 @@ public class SparkSQLIntegrationTests extends IntegrationTestsBase {
     FieldValueList subEntry = entry.get(1).getRepeatedValue().get(0).getRecordValue();
     assertEquals("subkey", subEntry.get(0).getStringValue());
     assertEquals(999, subEntry.get(1).getLongValue());
+    // Make sure things are correctly cleaned up
+    checkThatWorkDirsHaveBeenCleaned();
+  }
+
+  // ---------------------------------------------------------------------------------------------------
+
+  @ParameterizedTest
+  @MethodSource(EXECUTION_ENGINE_WRITE_METHOD)
+  public void testInsertOverwrite(String engine, String writeMethod) {
+    DerbyDiskDB derby = new DerbyDiskDB(hive);
+    System.getProperties().setProperty(HiveBigQueryConfig.WRITE_METHOD_KEY, writeMethod);
+    System.getProperties()
+        .setProperty("spark.sql.extensions", HiveBigQuerySparkExtensions.class.getName());
+    initHive(engine, HiveBigQueryConfig.AVRO);
+    createExternalTable(TEST_TABLE_NAME, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
+    // Create some initial data in BQ
+    runBqQuery(
+        String.format(
+            "INSERT `${dataset}.%s` VALUES (123, 'hello'), (999, 'abcd')", TEST_TABLE_NAME));
+    TableResult result =
+        runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", TEST_TABLE_NAME));
+    // Make sure the initial data is there
+    assertEquals(2, result.getTotalRows());
+    // Run INSERT OVERWRITE with Spark SQL
+    SparkSession spark = getSparkSession(derby, hive.getHiveConf());
+    spark.sql("INSERT OVERWRITE TABLE " + TEST_TABLE_NAME + " VALUES (888, 'xyz')");
+    // Make sure the new data erased the old one
+    result = runBqQuery(String.format("SELECT * FROM `${dataset}.%s`", TEST_TABLE_NAME));
+    assertEquals(1, result.getTotalRows());
+    List<FieldValueList> rows = Streams.stream(result.iterateAll()).collect(Collectors.toList());
+    assertEquals(888L, rows.get(0).get(0).getLongValue());
+    assertEquals("xyz", rows.get(0).get(1).getStringValue());
     // Make sure things are correctly cleaned up
     checkThatWorkDirsHaveBeenCleaned();
   }

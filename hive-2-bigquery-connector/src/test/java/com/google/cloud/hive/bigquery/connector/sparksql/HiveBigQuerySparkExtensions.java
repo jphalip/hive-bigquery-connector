@@ -13,23 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.output;
+package com.google.cloud.hive.bigquery.connector.sparksql;
 
-import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
-import org.apache.hadoop.hive.ql.hooks.HookContext;
+import org.apache.spark.sql.SparkSessionExtensions;
+import scala.Function1;
+import scala.runtime.BoxedUnit;
 
-/**
- * Post execution hook used to commit the outputs. We only use this with Hive 1 in combination with
- * Tez.
- */
-public class FailureExecHook implements ExecuteWithHookContext {
-
+public class HiveBigQuerySparkExtensions implements Function1<SparkSessionExtensions, BoxedUnit> {
   @Override
-  public void run(HookContext hookContext) throws Exception {
-    if (!ExecHookUtils.isProcessingOutputBqTable(hookContext)) {
-      // Not outputting to a BigQuery table, so we bail
-      return;
-    }
-    OutputCommitterUtils.abortJob(hookContext.getConf());
+  public BoxedUnit apply(SparkSessionExtensions extensions) {
+    extensions.injectPlannerStrategy(session -> new HiveBigQuerySparkStrategy());
+    return BoxedUnit.UNIT;
   }
 }

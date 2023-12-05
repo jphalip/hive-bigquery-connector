@@ -15,21 +15,23 @@
  */
 package com.google.cloud.hive.bigquery.connector.output;
 
-import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity;
 
-/**
- * Post execution hook used to commit the outputs. We only use this with Hive 1 in combination with
- * Tez.
- */
-public class FailureExecHook implements ExecuteWithHookContext {
+public class ExecHookUtils {
 
-  @Override
-  public void run(HookContext hookContext) throws Exception {
-    if (!ExecHookUtils.isProcessingOutputBqTable(hookContext)) {
-      // Not outputting to a BigQuery table, so we bail
-      return;
+  public static boolean isProcessingOutputBqTable(HookContext hookContext) {
+    // First, check if we're indeed processing a BigQuery table
+    for (WriteEntity entity : hookContext.getOutputs()) {
+      if (entity
+          .getTable()
+          .getStorageHandler()
+          .getClass()
+          .getName()
+          .equals("com.google.cloud.hive.bigquery.connector.BigQueryStorageHandler")) {
+        return true;
+      }
     }
-    OutputCommitterUtils.abortJob(hookContext.getConf());
+    return false;
   }
 }

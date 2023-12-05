@@ -32,6 +32,7 @@ import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.cloud.hive.bigquery.connector.utils.avro.AvroUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hcatalog.HCatalogUtils;
 import com.google.cloud.hive.bigquery.connector.utils.hive.HiveUtils;
+import com.google.cloud.hive.bigquery.connector.utils.sparksql.SparkSQLUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.IOException;
@@ -214,12 +215,6 @@ public abstract class BigQueryStorageHandlerBase
           HiveBigQueryConfig.HADOOP_COMMITTER_CLASS_KEY, BigQueryOutputCommitter.class.getName());
     }
 
-    // Special treatment for Spark
-    if (HiveUtils.isSparkJob(conf)) {
-      // Spark uses the new "mapreduce" Hadoop API for the job output format's committer
-      conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
-    }
-
     String engine = HiveConf.getVar(conf, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).toLowerCase();
     if (engine.equals("mr")) {
       // A workaround for mr mode, as MapRedTask.execute resets mapred.output.committer.class
@@ -255,6 +250,15 @@ public abstract class BigQueryStorageHandlerBase
     if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
       configureJobDetailsForIndirectWrite(
           opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
+    }
+
+    // Special treatment for Spark
+    if (SparkSQLUtils.isSparkJob(conf)) {
+      // Spark uses the new "mapreduce" Hadoop API for the job output format's committer
+      conf.set("mapreduce.job.outputformat.class", MapReduceOutputFormat.class.getName());
+      if (SparkSQLUtils.isOverwrite(conf, tableDesc.getTableName())) {
+        BigQueryMetaHook.makeOverwrite(conf, jobDetails);
+      }
     }
 
     // Save the job details file to disk
