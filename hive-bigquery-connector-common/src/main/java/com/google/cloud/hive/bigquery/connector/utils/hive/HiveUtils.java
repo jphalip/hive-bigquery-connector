@@ -15,9 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.utils.hive;
 
-import com.google.cloud.hive.bigquery.connector.utils.sparksql.SparkSQLUtils;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import com.google.cloud.hive.bigquery.connector.sparksql.SparkSQLUtils;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +24,7 @@ import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.TaskAttemptID;
+import org.apache.spark.TaskContext;
 
 /**
  * Helper class that looks up details about a task ID and Tez Vertex ID. This is useful to create
@@ -110,26 +109,10 @@ public class HiveUtils {
     return getHiveTaskAttemptIDWrapper(conf).getTaskID().toString();
   }
 
-  /**
-   * Retrieves the Spark task ID from the Spark context. Uses reflection to avoid this library
-   * requiring dependencies on Spark packages.
-   */
+  /** Retrieves the Spark task ID from the Spark context. */
   public static String getSparkTaskID() {
-    try {
-      Class<?> taskContextClass = Class.forName("org.apache.spark.TaskContext");
-      Method getMethod = taskContextClass.getMethod("get");
-      Object taskContext = getMethod.invoke(null);
-      Method partitionIdMethod = taskContextClass.getMethod("partitionId");
-      Object partitionId = partitionIdMethod.invoke(taskContext);
-      Method stageIdMethod = taskContextClass.getMethod("stageId");
-      Object stageId = stageIdMethod.invoke(taskContext);
-      return String.format("stage-%s-partition-%s", stageId, partitionId);
-    } catch (ClassNotFoundException
-        | InvocationTargetException
-        | NoSuchMethodException
-        | IllegalAccessException e) {
-      throw new RuntimeException(e);
-    }
+    TaskContext taskContext = TaskContext.get();
+    return String.format("stage-%s-partition-%s", taskContext.stageId(), taskContext.partitionId());
   }
 
   private static class HiveTaskAttemptIDWrapper extends TaskAttemptID {

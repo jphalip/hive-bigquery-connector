@@ -55,7 +55,7 @@ public class HiveBigQuerySparkStrategy extends SparkStrategy {
     List<String> insertTables = new ArrayList<>();
     parsePlan(plan, insertTables, overwriteTables);
     if (insertTables.size() > 0 || overwriteTables.size() > 0) {
-      SparkUtils.writeSparkJobFile(conf, insertTables, overwriteTables);
+      SparkSQLUtils.writeSparkJobFile(conf, insertTables, overwriteTables);
     }
     return emptySeq;
   }

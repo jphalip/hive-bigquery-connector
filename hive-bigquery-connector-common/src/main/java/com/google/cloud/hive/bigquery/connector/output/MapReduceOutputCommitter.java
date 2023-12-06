@@ -15,7 +15,7 @@
  */
 package com.google.cloud.hive.bigquery.connector.output;
 
-import com.google.cloud.hive.bigquery.connector.utils.sparksql.SparkSQLUtils;
+import com.google.cloud.hive.bigquery.connector.sparksql.SparkSQLUtils;
 import java.io.IOException;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;

@@ -17,12 +17,17 @@ package com.google.cloud.hive.bigquery.connector.output;
 
 import org.apache.hadoop.hive.ql.hooks.HookContext;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity.WriteType;
 
 public class ExecHookUtils {
 
-  public static boolean isProcessingOutputBqTable(HookContext hookContext) {
+  public static boolean isWritingToBqTable(HookContext hookContext) {
     // First, check if we're indeed processing a BigQuery table
     for (WriteEntity entity : hookContext.getOutputs()) {
+      if (entity.getWriteType() != WriteType.INSERT
+          && entity.getWriteType() != WriteType.INSERT_OVERWRITE) {
+        continue;
+      }
       if (entity
           .getTable()
           .getStorageHandler()

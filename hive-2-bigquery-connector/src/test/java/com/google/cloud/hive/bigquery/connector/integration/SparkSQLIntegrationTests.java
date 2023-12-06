@@ -13,23 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.output;
+package com.google.cloud.hive.bigquery.connector.integration;
 
-import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
-import org.apache.hadoop.hive.ql.hooks.HookContext;
+public class SparkSQLIntegrationTests extends SparkSQLIntegrationTestsBase {
 
-/**
- * Post execution hook used to commit the outputs. We only use this with Hive 1 in combination with
- * Tez.
- */
-public class FailureExecHook implements ExecuteWithHookContext {
+  // Tests are from the super-class
 
-  @Override
-  public void run(HookContext hookContext) throws Exception {
-    if (!ExecHookUtils.isWritingToBqTable(hookContext)) {
-      // Not outputting to a BigQuery table, so we bail
-      return;
-    }
-    OutputCommitterUtils.abortJob(hookContext.getConf());
-  }
 }

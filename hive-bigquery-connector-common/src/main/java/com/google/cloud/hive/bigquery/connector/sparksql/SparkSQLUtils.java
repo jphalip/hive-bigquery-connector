@@ -13,16 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.google.cloud.hive.bigquery.connector.utils.sparksql;
+package com.google.cloud.hive.bigquery.connector.sparksql;
 
 import com.google.cloud.hive.bigquery.connector.utils.FileSystemUtils;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
 import com.google.gson.Gson;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -59,5 +61,21 @@ public class SparkSQLUtils {
     Map<String, Object> sparkInfo = readSparkJobFile(conf);
     List<String> overwriteTables = (List<String>) sparkInfo.get("overwriteTables");
     return overwriteTables.contains(tableName);
+  }
+
+  public static void writeSparkJobFile(
+      Configuration conf, List<String> insertTables, List<String> overwriteTables) {
+    try {
+      Map<String, Object> data = new HashMap<>();
+      data.put("insertTables", insertTables);
+      data.put("overwriteTables", overwriteTables);
+      Path path = new Path(JobUtils.getQueryWorkDir(conf), SPARK_JOB_FILE_NAME);
+      FSDataOutputStream jobFile = path.getFileSystem(conf).create(path);
+      Gson gson = new Gson();
+      jobFile.write(gson.toJson(data).getBytes(StandardCharsets.UTF_8));
+      jobFile.close();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }
