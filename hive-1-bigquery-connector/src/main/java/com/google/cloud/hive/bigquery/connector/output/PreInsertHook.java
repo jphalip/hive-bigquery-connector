@@ -70,7 +70,7 @@ public class PreInsertHook implements ExecuteWithHookContext {
       context.setCmd(hookContext.getQueryPlan().getQueryString());
       ParseDriver parseDriver = new ParseDriver();
       ASTNode tree = parseDriver.parse(hookContext.getQueryPlan().getQueryString(), context);
-      HiveConf hiveConf = new HiveConf(conf, HiveConf.class);
+      HiveConf hiveConf = new HiveConf(conf, this.getClass());
       SemanticAnalyzer analyzer = new SemanticAnalyzer(hiveConf);
       if (tree.getChildren().size() == 0 || tree.getChild(0).getType() != HiveParser.TOK_QUERY) {
         return;

@@ -15,11 +15,13 @@
  */
 package com.google.cloud.hive.bigquery.connector.utils.hive;
 
+import java.lang.reflect.Constructor;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
@@ -133,6 +135,29 @@ public class HiveUtils {
     @Override
     public int hashCode() {
       return Objects.hash(getId(), getTaskID().getId(), getJobID());
+    }
+  }
+
+  /**
+   * Instantiates a new Hive metastore client. The `HiveMetaStoreClient` constructor has different
+   * signatures in different versions of Hive. So we try a few different ways using reflection.
+   */
+  public static HiveMetaStoreClient createMetastoreClient(Configuration conf) {
+    try {
+      Constructor<HiveMetaStoreClient> constructor;
+      try {
+        // Prefer HiveConf constructor if available
+        constructor = HiveMetaStoreClient.class.getConstructor(HiveConf.class);
+        HiveConf hiveConf =
+            conf instanceof HiveConf ? (HiveConf) conf : new HiveConf(conf, HiveUtils.class);
+        return constructor.newInstance(hiveConf);
+      } catch (NoSuchMethodException e) {
+        // Fall back to Configuration constructor
+        constructor = HiveMetaStoreClient.class.getConstructor(Configuration.class);
+        return constructor.newInstance(conf);
+      }
+    } catch (ReflectiveOperationException e) {
+      throw new RuntimeException("Failed to create HiveMetaStoreClient", e);
     }
   }
 }

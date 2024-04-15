@@ -69,6 +69,7 @@ public class HiveBigQueryConfig
   public static final String IMPERSONATE_FOR_GROUP_PREFIX =
       "bq.impersonation.service.account.for.group.";
   public static final String IMPERSONATE_SERVICE_ACCOUNT = "bq.impersonation.service.account";
+  public static final String DESTINATION_TABLE_KMS_KEY_NAME = "bq.destination.table.kms.key.name";
   public static final String CREATE_DISPOSITION_KEY = "bq.create.disposition";
   public static final String TIME_PARTITION_TYPE_KEY = "bq.time.partition.type";
   public static final String TIME_PARTITION_FIELD_KEY = "bq.time.partition.field";
@@ -99,6 +100,11 @@ public class HiveBigQueryConfig
   public static final String STREAM_FILE_EXTENSION = "stream";
   public static final String JOB_DETAILS_FILE = "job-details.json";
 
+  // For internal use only
+  public static final String CONNECTOR_IN_TEST = "hive.bq.connector.in.test";
+  public static final String FORCE_COMMIT_FAILURE = "hive.bq.connector.test.force.commit.failure";
+  public static final String FORCED_COMMIT_FAILURE_ERROR_MESSAGE = "Forced commit failure";
+
   // Pseudo columns in BigQuery for ingestion time partitioned tables
   public static final String PARTITION_TIME_PSEUDO_COLUMN = "_PARTITIONTIME";
   public static final String PARTITION_DATE_PSEUDO_COLUMN = "_PARTITIONDATE";
@@ -117,6 +123,9 @@ public class HiveBigQueryConfig
   Optional<String> impersonationServiceAccount;
   Optional<Map<String, String>> impersonationServiceAccountsForUsers;
   Optional<Map<String, String>> impersonationServiceAccountsForGroups;
+
+  // KMS
+  Optional<String> destinationTableKmsKeyName = empty();
 
   // Reading parameters
   DataFormat readDataFormat; // ARROW or AVRO
@@ -328,6 +337,10 @@ public class HiveBigQueryConfig
             getAnyOptionsWithPrefix(confAsMap, tableParameters, IMPERSONATE_FOR_GROUP_PREFIX),
             IMPERSONATE_FOR_GROUP_PREFIX);
 
+    // KMS
+    opts.destinationTableKmsKeyName =
+        getAnyOption(DESTINATION_TABLE_KMS_KEY_NAME, conf, tableParameters);
+
     // Partitioning and clustering
     opts.partitionType =
         getAnyOption(TIME_PARTITION_TYPE_KEY, conf, tableParameters)
@@ -418,6 +431,10 @@ public class HiveBigQueryConfig
     return loadSchemaUpdateOptions;
   }
 
+  public void setLoadSchemaUpdateOptions(ImmutableList<SchemaUpdateOption> options) {
+    loadSchemaUpdateOptions = options;
+  }
+
   @Override
   public boolean getEnableModeCheckForSchemaFields() {
     return enableModeCheckForSchemaFields;
@@ -480,7 +497,7 @@ public class HiveBigQueryConfig
 
   @Override
   public java.util.Optional<String> getKmsKeyName() {
-    return java.util.Optional.empty();
+    return destinationTableKmsKeyName.toJavaUtil();
   }
 
   @Override
