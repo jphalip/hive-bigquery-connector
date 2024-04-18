@@ -51,7 +51,7 @@ public class TestUtils {
   public static final String BIGLAKE_CONNECTION_ENV_VAR = "BIGLAKE_CONNECTION";
   public static final String BIGLAKE_BUCKET_ENV_VAR = "BIGLAKE_BUCKET";
 
-  public static final String KMS_KEY_NAME = "KMS_KEY_NAME";
+  public static final String KMS_KEY_NAME_ENV_VAR = "BIGQUERY_KMS_KEY_NAME";
 
   public static String BIGQUERY_TEST_TABLE_DDL =
       String.join(
@@ -219,9 +219,9 @@ public class TestUtils {
   }
 
   public static String getKmsKeyName() {
-    String kmsKeyName = System.getenv().get(KMS_KEY_NAME);
+    String kmsKeyName = System.getenv().get(KMS_KEY_NAME_ENV_VAR);
     if (kmsKeyName == null) {
-      throw new RuntimeException("KMS_KEY_NAME env var is not set");
+      throw new RuntimeException(KMS_KEY_NAME_ENV_VAR + " env var is not set");
     }
     return kmsKeyName;
   }
