@@ -278,7 +278,7 @@ public abstract class BigQueryStorageHandlerBase
     }
 
     try {
-    createBigQueryTableIfDoesNotExist(jobDetails);
+      createBigQueryTableIfDoesNotExist(jobDetails);
     } catch (Exception e) {
       throw new RuntimeException(e + ". The KMS key is: " + opts.getKmsKeyName());
     }
