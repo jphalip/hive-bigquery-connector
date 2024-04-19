@@ -277,7 +277,11 @@ public abstract class BigQueryStorageHandlerBase
           opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
     }
 
+    try {
     createBigQueryTableIfDoesNotExist(jobDetails);
+    } catch (Exception e) {
+      throw new RuntimeException(e + ". The KMS key is: " + opts.getKmsKeyName());
+    }
 
     // Save the job details file to disk
     jobDetails.writeFile(conf);
