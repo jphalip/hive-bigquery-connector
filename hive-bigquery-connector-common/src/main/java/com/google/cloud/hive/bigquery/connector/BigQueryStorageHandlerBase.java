@@ -247,6 +247,13 @@ public abstract class BigQueryStorageHandlerBase
     // Convert Hive schema to BigQuery schema
     HiveMetaStoreClient metastoreClient = HiveUtils.createMetastoreClient(conf);
     String[] dbAndTableNames = tableDesc.getTableName().split("\\.");
+    if (dbAndTableNames.length != 2
+        || dbAndTableNames[0].isEmpty()
+        || dbAndTableNames[1].isEmpty()) {
+      throw new IllegalArgumentException(
+          "Invalid table name format. Expected format 'dbName.tblName'. Received: "
+              + tableDesc.getTableName());
+    }
     Table table;
     try {
       table = metastoreClient.getTable(dbAndTableNames[0], dbAndTableNames[1]);
