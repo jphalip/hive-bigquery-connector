@@ -28,20 +28,17 @@ import org.apache.hadoop.conf.Configuration;
 public class OutputCommitterUtils {
 
   public static void commitJob(Configuration conf, JobDetails jobDetails) throws IOException {
-    try {
-      if (conf.getBoolean(HiveBigQueryConfig.CONNECTOR_IN_TEST, false)
-          && conf.getBoolean(HiveBigQueryConfig.FORCE_COMMIT_FAILURE, false)) {
-        // For integration testing only
-        throw new RuntimeException(HiveBigQueryConfig.FORCED_COMMIT_FAILURE_ERROR_MESSAGE);
-      }
-      if (jobDetails.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
-        DirectOutputCommitter.commitJob(conf, jobDetails);
-      } else {
-        IndirectOutputCommitter.commitJob(conf, jobDetails);
-      }
-    } finally {
-      jobDetails.cleanUp(conf);
+    if (conf.getBoolean(HiveBigQueryConfig.CONNECTOR_IN_TEST, false)
+        && conf.getBoolean(HiveBigQueryConfig.FORCE_COMMIT_FAILURE, false)) {
+      // For integration testing only
+      throw new RuntimeException(HiveBigQueryConfig.FORCED_COMMIT_FAILURE_ERROR_MESSAGE);
     }
+    if (jobDetails.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
+      DirectOutputCommitter.commitJob(conf, jobDetails);
+    } else {
+      IndirectOutputCommitter.commitJob(conf, jobDetails);
+    }
+    jobDetails.cleanUp(conf);
   }
 
   public static void commitJob(Configuration conf) throws IOException {
