@@ -23,7 +23,6 @@ import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTest
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestConstants.CONNECTOR_JAR_DIRECTORY;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestConstants.CONNECTOR_JAR_PREFIX;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestConstants.DATAPROC_ENDPOINT;
-import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestConstants.PROJECT_ID;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestConstants.REGION;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.createBqDataset;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.deleteBqDatasetAndTables;
@@ -33,12 +32,13 @@ import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTest
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.uploadConnectorInitAction;
 import static com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.uploadConnectorJar;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.google.cloud.hive.bigquery.connector.acceptance.AcceptanceTestUtils.ClusterProperty;
-import com.google.common.collect.ImmutableList;
+import com.google.cloud.bigquery.FieldValueList;
+import com.google.cloud.bigquery.TableResult;
+import com.google.cloud.hive.bigquery.connector.TestUtils;
 import com.google.common.collect.ImmutableMap;
-import java.time.Duration;
-import java.util.Collections;
+import com.google.common.collect.Streams;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -59,14 +59,10 @@ import test.hivebqcon.com.google.cloud.dataproc.v1.JobControllerSettings;
 import test.hivebqcon.com.google.cloud.dataproc.v1.JobPlacement;
 import test.hivebqcon.com.google.cloud.dataproc.v1.JobStatus;
 import test.hivebqcon.com.google.cloud.dataproc.v1.NodeInitializationAction;
+import test.hivebqcon.com.google.cloud.dataproc.v1.PigJob;
 import test.hivebqcon.com.google.cloud.dataproc.v1.SoftwareConfig;
 
-public class DataprocAcceptanceTestBase {
-
-  protected static final ClusterProperty DISABLE_CONSCRYPT =
-      ClusterProperty.of("dataproc:dataproc.conscrypt.provider.enable", "false", "nc");
-  protected static final ImmutableList<ClusterProperty> DISABLE_CONSCRYPT_LIST =
-      ImmutableList.<ClusterProperty>builder().add(DISABLE_CONSCRYPT).build();
+public abstract class DataprocAcceptanceTestBase {
 
   private AcceptanceTestContext context;
 
@@ -75,22 +71,13 @@ public class DataprocAcceptanceTestBase {
   }
 
   protected static AcceptanceTestContext setup(String dataprocImageVersion) throws Exception {
-    return setup(dataprocImageVersion, Collections.emptyList());
-  }
-
-  protected static AcceptanceTestContext setup(
-      String dataprocImageVersion, List<ClusterProperty> clusterProperties) throws Exception {
-    String testId = generateTestId(dataprocImageVersion, clusterProperties);
+    String testId = generateTestId(dataprocImageVersion);
     String clusterName = generateClusterName(testId);
     String testBaseGcsDir = AcceptanceTestUtils.createTestBaseGcsDir(testId);
     String connectorJarUri = testBaseGcsDir + "/connector.jar";
     String connectorInitActionUri = testBaseGcsDir + "/connectors.sh";
-    Map<String, String> properties =
-        clusterProperties.stream()
-            .collect(Collectors.toMap(ClusterProperty::getKey, ClusterProperty::getValue));
-    String bqProject = PROJECT_ID;
-    String bqDataset = "hivebq_test_dataset_" + testId.replace("-", "_");
-    String bqTable = "hivebq_test_table_" + testId.replace("-", "_");
+    String bqProject = TestUtils.getProject();
+    String bqDataset = "acceptance_dataset_" + testId.replace("-", "_");
 
     uploadConnectorJar(CONNECTOR_JAR_DIRECTORY, CONNECTOR_JAR_PREFIX, connectorJarUri);
 
@@ -99,12 +86,7 @@ public class DataprocAcceptanceTestBase {
     createBqDataset(bqProject, bqDataset);
 
     createClusterIfNeeded(
-        clusterName,
-        dataprocImageVersion,
-        testId,
-        properties,
-        connectorJarUri,
-        connectorInitActionUri);
+        clusterName, dataprocImageVersion, connectorJarUri, connectorInitActionUri);
 
     AcceptanceTestContext testContext =
         new AcceptanceTestContext(
@@ -115,8 +97,7 @@ public class DataprocAcceptanceTestBase {
             connectorJarUri,
             connectorInitActionUri,
             bqProject,
-            bqDataset,
-            bqTable);
+            bqDataset);
     System.out.print(testContext);
 
     return testContext;
@@ -155,22 +136,20 @@ public class DataprocAcceptanceTestBase {
   protected static void createClusterIfNeeded(
       String clusterName,
       String dataprocImageVersion,
-      String testId,
-      Map<String, String> properties,
       String connectorJarUri,
       String connectorInitActionUri)
       throws Exception {
     Cluster clusterSpec =
         createClusterSpec(
-            clusterName, dataprocImageVersion, properties, connectorJarUri, connectorInitActionUri);
+            clusterName, dataprocImageVersion, connectorJarUri, connectorInitActionUri);
     System.out.println("Cluster spec:\n" + clusterSpec);
     System.out.println("Creating cluster " + clusterName + " ...");
-    cluster(client -> client.createClusterAsync(PROJECT_ID, REGION, clusterSpec).get());
+    cluster(client -> client.createClusterAsync(TestUtils.getProject(), REGION, clusterSpec).get());
   }
 
   protected static void deleteCluster(String clusterName) throws Exception {
     System.out.println("Deleting cluster " + clusterName + " ...");
-    cluster(client -> client.deleteClusterAsync(PROJECT_ID, REGION, clusterName).get());
+    cluster(client -> client.deleteClusterAsync(TestUtils.getProject(), REGION, clusterName).get());
   }
 
   private static void cluster(ThrowingConsumer<ClusterControllerClient> command) throws Exception {
@@ -184,12 +163,11 @@ public class DataprocAcceptanceTestBase {
   private static Cluster createClusterSpec(
       String clusterName,
       String dataprocImageVersion,
-      Map<String, String> properties,
       String connectorJarUri,
       String connectorInitActionUri) {
     return Cluster.newBuilder()
         .setClusterName(clusterName)
-        .setProjectId(PROJECT_ID)
+        .setProjectId(TestUtils.getProject())
         .setConfig(
             ClusterConfig.newBuilder()
                 .addInitializationActions(
@@ -219,52 +197,78 @@ public class DataprocAcceptanceTestBase {
                                 .setBootDiskSizeGb(300)
                                 .setNumLocalSsds(0)))
                 .setSoftwareConfig(
-                    SoftwareConfig.newBuilder()
-                        .setImageVersion(dataprocImageVersion)
-                        .putAllProperties(properties)))
+                    SoftwareConfig.newBuilder().setImageVersion(dataprocImageVersion)))
         .build();
   }
 
-  private Job createAndRunHiveJob(
-      String testName, String queryFile, String outputDirUri, Duration timeout) throws Exception {
+  private Job createAndRunHiveJob(String testName, String queryFile, String outputDirUri)
+      throws Exception {
     Job job = createHiveJob(testName, queryFile, outputDirUri);
-    System.out.print("Running job:\n" + job);
-    return runAndWait(testName, job, timeout);
+    System.out.print("Running hive job:\n" + job);
+    return runAndWait(testName, job);
+  }
+
+  private Job createAndRunPigJob(String testName, String queryFile, String outputDirUri)
+      throws Exception {
+    Job job = createPigJob(testName, queryFile, outputDirUri);
+    System.out.print("Running pig job:\n" + job);
+    return runAndWait(testName, job);
+  }
+
+  private Map<String, String> getTestScriptVariables(String testName, String outputTableDirUri) {
+    return ImmutableMap.<String, String>builder()
+        .put("BQ_PROJECT", context.bqProject)
+        .put("BQ_DATASET", context.bqDataset)
+        .put("HIVE_TEST_TABLE", testName.replaceAll("-", "_") + "_table")
+        .put("HIVE_OUTPUT_TABLE", testName.replaceAll("-", "_") + "_output")
+        .put("HIVE_OUTPUT_DIR_URI", outputTableDirUri)
+        .build();
+  }
+
+  private String uploadQueryFile(String testName, String queryFile) throws Exception {
+    String queryFileUri = context.getFileUri(testName, queryFile);
+    AcceptanceTestUtils.uploadResourceToGcs("/acceptance/" + queryFile, queryFileUri, "text/x-sql");
+    return queryFileUri;
   }
 
   private Job createHiveJob(String testName, String queryFile, String outputTableDirUri)
       throws Exception {
-    String queryFileUri = context.getFileUri(testName, queryFile);
-    AcceptanceTestUtils.uploadResourceToGcs("/acceptance/" + queryFile, queryFileUri, "text/x-sql");
-    ImmutableMap<String, String> scriptVariables =
-        ImmutableMap.<String, String>builder()
-            .put("BQ_PROJECT", context.bqProject)
-            .put("BQ_DATASET", context.bqDataset)
-            .put("BQ_TABLE", context.bqTable)
-            .put("HIVE_TEST_TABLE", testName.replaceAll("-", "_") + "_table")
-            .put("HIVE_OUTPUT_TABLE", testName.replaceAll("-", "_") + "_output")
-            .put("HIVE_OUTPUT_DIR_URI", outputTableDirUri)
-            .build();
+    String queryFileUri = uploadQueryFile(testName, queryFile);
     HiveJob.Builder hiveJobBuilder =
-        HiveJob.newBuilder().setQueryFileUri(queryFileUri).putAllScriptVariables(scriptVariables);
+        HiveJob.newBuilder()
+            .setQueryFileUri(queryFileUri)
+            .putAllScriptVariables(getTestScriptVariables(testName, outputTableDirUri));
     return Job.newBuilder()
         .setPlacement(JobPlacement.newBuilder().setClusterName(context.clusterId))
         .setHiveJob(hiveJobBuilder)
         .build();
   }
 
-  private Job runAndWait(String testName, Job job, Duration timeout) throws Exception {
+  private Job createPigJob(String testName, String queryFile, String outputTableDirUri)
+      throws Exception {
+    String queryFileUri = uploadQueryFile(testName, queryFile);
+    PigJob.Builder pigJobBuilder =
+        PigJob.newBuilder()
+            .setQueryFileUri(queryFileUri)
+            .putAllScriptVariables(getTestScriptVariables(testName, outputTableDirUri));
+    return Job.newBuilder()
+        .setPlacement(JobPlacement.newBuilder().setClusterName(context.clusterId))
+        .setPigJob(pigJobBuilder)
+        .build();
+  }
+
+  private Job runAndWait(String testName, Job job) throws Exception {
     try (JobControllerClient jobControllerClient =
         JobControllerClient.create(
             JobControllerSettings.newBuilder().setEndpoint(DATAPROC_ENDPOINT).build())) {
-      Job request = jobControllerClient.submitJob(PROJECT_ID, REGION, job);
+      Job request = jobControllerClient.submitJob(TestUtils.getProject(), REGION, job);
       String jobId = request.getReference().getJobId();
-      System.err.println(String.format("%s job ID: %s", testName, jobId));
+      System.err.printf("%s job ID: %s%n", testName, jobId);
       CompletableFuture<Job> finishedJobFuture =
           CompletableFuture.supplyAsync(
-              () -> waitForJobCompletion(jobControllerClient, PROJECT_ID, REGION, jobId));
-      Job jobInfo = finishedJobFuture.get(timeout.getSeconds(), TimeUnit.SECONDS);
-      return jobInfo;
+              () ->
+                  waitForJobCompletion(jobControllerClient, TestUtils.getProject(), REGION, jobId));
+      return finishedJobFuture.get(ACCEPTANCE_TEST_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS);
     }
   }
 
@@ -289,48 +293,82 @@ public class DataprocAcceptanceTestBase {
     }
   }
 
-  void verifyJobSuceeded(Job job) throws Exception {
+  void verifyJobSucceeded(Job job) throws Exception {
     String driverOutput =
         AcceptanceTestUtils.readGcsFile(job.getDriverControlFilesUri() + "driveroutput.000000000");
     System.out.println("Driver output: " + driverOutput);
     System.out.println("Job status: " + job.getStatus().getState());
-    assertThat(job.getStatus().getState()).isEqualTo(JobStatus.State.DONE);
+    if (job.getStatus().getState() != JobStatus.State.DONE) {
+      throw new AssertionError(job.getStatus().getDetails());
+    }
   }
 
-  void verifyJobOutput(String outputDirUri, String expectedOutput) throws Exception {
+  void verifyGCSJobOutput(String outputDirUri, String expectedOutput) throws Exception {
     String output = readGcsFile(outputDirUri, "_0");
     assertThat(output.trim()).isEqualTo(expectedOutput);
   }
 
   @Test
-  public void testHiveBq_managedTable_createWriteReadDrop_success() throws Exception {
+  public void testManagedTableCreateWriteReadDrop() throws Exception {
     String testName = "test-hivebq-managed";
     String outputDirUri = context.getOutputDirUri(testName);
-
-    Job result =
-        createAndRunHiveJob(
-            testName,
-            "create_write_read_drop_managed_table.sql",
-            outputDirUri,
-            Duration.ofSeconds(ACCEPTANCE_TEST_TIMEOUT_IN_SECONDS));
-
-    verifyJobSuceeded(result);
-    verifyJobOutput(outputDirUri, "345,world");
+    Job job =
+        createAndRunHiveJob(testName, "create_write_read_drop_managed_table.sql", outputDirUri);
+    verifyJobSucceeded(job);
+    verifyGCSJobOutput(outputDirUri, "345,world");
   }
 
   @Test
-  public void testHiveBq_externalTable_createReadDrop_success() throws Exception {
+  public void testExternalTable_CreateReadDrop() throws Exception {
     String testName = "test-hivebq-external";
     String outputDirUri = context.getOutputDirUri(testName);
+    Job job = createAndRunHiveJob(testName, "create_read_drop_external_table.sql", outputDirUri);
+    verifyJobSucceeded(job);
+    verifyGCSJobOutput(outputDirUri, "king,1191");
+  }
 
-    Job result =
-        createAndRunHiveJob(
-            testName,
-            "create_read_drop_external_table.sql",
-            outputDirUri,
-            Duration.ofSeconds(ACCEPTANCE_TEST_TIMEOUT_IN_SECONDS));
-
-    verifyJobSuceeded(result);
-    verifyJobOutput(outputDirUri, "king,1191");
+  @Test
+  public void testPig() throws Exception {
+    String testName = "test-pig";
+    String outputDirUri = context.getOutputDirUri(testName);
+    String sourceTable = testName.replaceAll("-", "_") + "_table";
+    String destTable = testName.replaceAll("-", "_") + "_output";
+    // Create the BQ tables
+    TestUtils.getBigqueryClient()
+        .query(
+            String.format(
+                "CREATE OR REPLACE TABLE `%s.%s` (%s)",
+                context.bqDataset, sourceTable, TestUtils.BIGQUERY_TEST_TABLE_DDL));
+    TestUtils.getBigqueryClient()
+        .query(
+            String.format(
+                "CREATE OR REPLACE TABLE `%s.%s` (%s)",
+                context.bqDataset, destTable, TestUtils.BIGQUERY_TEST_TABLE_DDL));
+    TestUtils.getBigqueryClient()
+        .query(
+            String.format(
+                "INSERT `%s.%s` VALUES (123, 'hello'), (789, 'abcd')",
+                context.bqDataset, sourceTable));
+    // Create the external test Hive tables
+    Job hiveJob = createAndRunHiveJob(testName, "create_two_external_tables.sql", outputDirUri);
+    verifyJobSucceeded(hiveJob);
+    // Run a pig Job
+    Job pigJob = createAndRunPigJob(testName, "read_write.pig", outputDirUri);
+    verifyJobSucceeded(pigJob);
+    // Wait a bit to give a chance for the committed writes to become readable
+    Thread.sleep(60000); // 1 minute
+    // Read the data using the BQ SDK
+    TableResult result =
+        TestUtils.getBigqueryClient()
+            .query(
+                String.format(
+                    "SELECT * FROM `%s.%s` ORDER BY number", context.bqDataset, destTable));
+    // Verify we get the expected values
+    assertEquals(2, result.getTotalRows());
+    List<FieldValueList> rows = Streams.stream(result.iterateAll()).collect(Collectors.toList());
+    assertEquals(123L, rows.get(0).get(0).getLongValue());
+    assertEquals("hello", rows.get(0).get(1).getStringValue());
+    assertEquals(789L, rows.get(1).get(0).getLongValue());
+    assertEquals("abcd", rows.get(1).get(1).getStringValue());
   }
 }
