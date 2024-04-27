@@ -16,6 +16,7 @@
 package com.google.cloud.hive.bigquery.connector;
 
 import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableInfo;
 import com.google.cloud.bigquery.connector.common.BigQueryClient;
 import com.google.cloud.bigquery.connector.common.BigQueryClient.CreateTableOptions;
@@ -217,6 +218,38 @@ public abstract class BigQueryStorageHandlerBase
     }
   }
 
+  public Schema getBigQuerySchema(Injector injector, TableDesc tableDesc, TableId tableId) {
+    if (HCatalogUtils.isHCatalogOutputJob(conf)) {
+      // With Pig and HCatalog on Dataproc, we currently cannot the Hive Metastore to retrieve
+      // the Hive schema. So we fetch the schema directly from BigQuery, which means that the
+      // BigQuery table must already exist.
+      // TODO: See if we can remove this limitation
+      TableInfo bqTableInfo = injector.getInstance(BigQueryClient.class).getTable(tableId);
+      if (bqTableInfo == null) {
+        throw new RuntimeException("BigQuery table does not exist: " + tableId);
+      }
+      return bqTableInfo.getDefinition().getSchema();
+    }
+    // Fetch the Hive schema
+    HiveMetaStoreClient metastoreClient = HiveUtils.createMetastoreClient(conf);
+    String[] dbAndTableNames = tableDesc.getTableName().split("\\.");
+    if (dbAndTableNames.length != 2
+        || dbAndTableNames[0].isEmpty()
+        || dbAndTableNames[1].isEmpty()) {
+      throw new IllegalArgumentException(
+          "Invalid table name format. Expected format 'dbName.tblName'. Received: "
+              + tableDesc.getTableName());
+    }
+    Table table;
+    try {
+      table = metastoreClient.getTable(dbAndTableNames[0], dbAndTableNames[1]);
+    } catch (TException e) {
+      throw new RuntimeException(e);
+    }
+    // Convert the Hive schema to BigQuery schema
+    return BigQuerySchemaConverter.toBigQuerySchema(table.getSd());
+  }
+
   @Override
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
     Properties tableProperties = tableDesc.getProperties();
@@ -241,27 +274,13 @@ public abstract class BigQueryStorageHandlerBase
     // Set config for the GCS Connector
     setGCSAccessTokenProvider(conf);
 
+    // Retrieve the BigQuery schema
+    TableId tableId =
+        BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY));
     Injector injector =
         Guice.createInjector(
             new BigQueryClientModule(), new HiveBigQueryConnectorModule(conf, tableProperties));
-
-    // Convert Hive schema to BigQuery schema
-    HiveMetaStoreClient metastoreClient = HiveUtils.createMetastoreClient(conf);
-    String[] dbAndTableNames = tableDesc.getTableName().split("\\.");
-    if (dbAndTableNames.length != 2
-        || dbAndTableNames[0].isEmpty()
-        || dbAndTableNames[1].isEmpty()) {
-      throw new IllegalArgumentException(
-          "Invalid table name format. Expected format 'dbName.tblName'. Received: "
-              + tableDesc.getTableName());
-    }
-    Table table;
-    try {
-      table = metastoreClient.getTable(dbAndTableNames[0], dbAndTableNames[1]);
-    } catch (TException e) {
-      throw new RuntimeException(e);
-    }
-    Schema bigQuerySchema = BigQuerySchemaConverter.toBigQuerySchema(table.getSd());
+    Schema bigQuerySchema = getBigQuerySchema(injector, tableDesc, tableId);
 
     // More special treatment for HCatalog
     if (HCatalogUtils.isHCatalogOutputJob(conf)) {
