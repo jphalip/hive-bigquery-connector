@@ -99,6 +99,7 @@ public class HiveBigQueryConfig
   public static final String LOAD_FILE_EXTENSION = "avro";
   public static final String STREAM_FILE_EXTENSION = "stream";
   public static final String JOB_DETAILS_FILE = "job-details.json";
+  public static final String QUERY_ID = "bq.connector.query.id";
 
   // For internal use only
   public static final String CONNECTOR_IN_TEST = "hive.bq.connector.in.test";
