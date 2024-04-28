@@ -103,6 +103,8 @@ public class HiveBigQueryConfig
 
   // For internal use only
   public static final String CONNECTOR_IN_TEST = "hive.bq.connector.in.test";
+  public static final String FORCE_DROP_FAILURE = "hive.bq.connector.test.force.drop.failure";
+  public static final String FORCED_DROP_FAILURE_ERROR_MESSAGE = "Forced table drop failure";
   public static final String FORCE_COMMIT_FAILURE = "hive.bq.connector.test.force.commit.failure";
   public static final String FORCED_COMMIT_FAILURE_ERROR_MESSAGE = "Forced commit failure";
 

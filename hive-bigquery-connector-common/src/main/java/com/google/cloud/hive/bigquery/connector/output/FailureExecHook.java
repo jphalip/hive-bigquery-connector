@@ -20,6 +20,7 @@ import org.apache.hadoop.hive.ql.hooks.Entity.Type;
 import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
 import org.apache.hadoop.hive.ql.hooks.HookContext;
 import org.apache.hadoop.hive.ql.hooks.WriteEntity;
+import org.apache.hadoop.hive.ql.hooks.WriteEntity.WriteType;
 
 /**
  * Post execution hook used to commit the outputs. We only use this with Hive 1 in combination with
@@ -32,6 +33,8 @@ public class FailureExecHook implements ExecuteWithHookContext {
     for (WriteEntity entity : hookContext.getOutputs()) {
       if (entity.getType() == Type.TABLE
           && entity.getTable().getStorageHandler() != null
+          && (entity.getWriteType() == WriteType.INSERT
+              || entity.getWriteType() == WriteType.INSERT_OVERWRITE)
           && entity
               .getTable()
               .getStorageHandler()

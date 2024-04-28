@@ -372,6 +372,11 @@ public class BigQueryMetaHook {
   }
 
   public void commitDropTable(Table table, boolean deleteData) throws MetaException {
+    if (conf.getBoolean(HiveBigQueryConfig.CONNECTOR_IN_TEST, false)
+        && conf.getBoolean(HiveBigQueryConfig.FORCE_DROP_FAILURE, false)) {
+      // For integration testing only
+      throw new RuntimeException(HiveBigQueryConfig.FORCED_DROP_FAILURE_ERROR_MESSAGE);
+    }
     if (!HiveUtils.isExternalTable(table) && deleteData) {
       // This is a managed table, so let's delete the table in BigQuery
       Injector injector =

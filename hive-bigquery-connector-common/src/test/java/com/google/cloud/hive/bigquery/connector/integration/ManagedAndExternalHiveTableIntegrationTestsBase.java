@@ -113,6 +113,27 @@ public abstract class ManagedAndExternalHiveTableIntegrationTestsBase extends In
   // ---------------------------------------------------------------------------------------------------
 
   @Test
+  public void testDropManagedTableFailure() {
+    System.getProperties().setProperty(HiveBigQueryConfig.FORCE_DROP_FAILURE, "true");
+    initHive();
+    // Make sure the managed table doesn't exist yet in BigQuery
+    dropBqTableIfExists(dataset, MANAGED_TEST_TABLE_NAME);
+    assertFalse(bQTableExists(dataset, MANAGED_TEST_TABLE_NAME));
+    // Create the managed table using Hive
+    createManagedTable(MANAGED_TEST_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL);
+    // Check that the table was created in BigQuery
+    assertTrue(bQTableExists(dataset, MANAGED_TEST_TABLE_NAME));
+    // Attempt to drop the managed table using hive
+    Throwable exception =
+        assertThrows(
+            RuntimeException.class, () -> runHiveQuery("DROP TABLE " + MANAGED_TEST_TABLE_NAME));
+    assertTrue(
+        exception.getMessage().contains(HiveBigQueryConfig.FORCED_DROP_FAILURE_ERROR_MESSAGE));
+  }
+
+  // ---------------------------------------------------------------------------------------------------
+
+  @Test
   public void testDropExternalTable() {
     initHive();
     createExternalTable(TEST_TABLE_NAME, HIVE_TEST_TABLE_DDL, BIGQUERY_TEST_TABLE_DDL);
