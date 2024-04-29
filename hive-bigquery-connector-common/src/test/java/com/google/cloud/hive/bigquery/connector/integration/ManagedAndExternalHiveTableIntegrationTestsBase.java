@@ -148,6 +148,7 @@ public abstract class ManagedAndExternalHiveTableIntegrationTestsBase extends In
     System.getProperties()
         .setProperty(HiveBigQueryConfig.DESTINATION_TABLE_KMS_KEY_NAME, TestUtils.getKmsKeyName());
     initHive();
+    dropBqTableIfExists(dataset, MANAGED_TEST_TABLE_NAME);
     createManagedTable(MANAGED_TEST_TABLE_NAME, HIVE_ALL_TYPES_TABLE_DDL);
     TableInfo tableInfo = getTableInfo(dataset, MANAGED_TEST_TABLE_NAME);
     assertEquals(TestUtils.getKmsKeyName(), tableInfo.getEncryptionConfiguration().getKmsKeyName());
