@@ -261,6 +261,12 @@ public class TestUtils {
     TableId tableId = TableId.of(getProject(), dataset, table);
     if (getBigqueryClient().tableExists(tableId)) {
       getBigqueryClient().deleteTable(tableId);
+      try {
+        // Wait a bit to avoid rate limiting issues with the BQ backend for table operations
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
