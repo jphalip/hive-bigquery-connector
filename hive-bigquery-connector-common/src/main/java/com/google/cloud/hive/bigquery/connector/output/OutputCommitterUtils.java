@@ -18,6 +18,7 @@ package com.google.cloud.hive.bigquery.connector.output;
 import com.google.cloud.hive.bigquery.connector.JobDetails;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.output.direct.DirectOutputCommitter;
+import com.google.cloud.hive.bigquery.connector.output.indirect.IndirectOutputCommitter;
 import com.google.common.collect.Sets;
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +32,11 @@ public class OutputCommitterUtils {
         && conf.getBoolean(HiveBigQueryConfig.FORCE_COMMIT_FAILURE, false)) {
       // For integration testing only
       throw new RuntimeException(HiveBigQueryConfig.FORCED_COMMIT_FAILURE_ERROR_MESSAGE);
+    }
+    if (jobDetails.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_DIRECT)) {
+      DirectOutputCommitter.commitJob(conf, jobDetails);
+    } else {
+      IndirectOutputCommitter.commitJob(conf, jobDetails);
     }
     jobDetails.cleanUp(conf);
   }
