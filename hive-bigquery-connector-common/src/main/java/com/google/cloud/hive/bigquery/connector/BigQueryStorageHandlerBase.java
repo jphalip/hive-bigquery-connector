@@ -45,12 +45,12 @@ import java.util.Properties;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
-import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
-import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
+import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
+import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
@@ -65,7 +65,6 @@ import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapred.OutputFormat;
 import org.apache.hive.hcatalog.common.HCatConstants;
 import org.apache.hive.hcatalog.mapreduce.OutputJobInfo;
-import org.apache.thrift.TException;
 
 /** Main entrypoint for Hive/BigQuery interactions. */
 @SuppressWarnings({"rawtypes", "deprecated"})
@@ -231,7 +230,14 @@ public abstract class BigQueryStorageHandlerBase
       return bqTableInfo.getDefinition().getSchema();
     }
     // Fetch the Hive schema
-    HiveMetaStoreClient metastoreClient = HiveUtils.createMetastoreClient(conf);
+    Hive hive;
+    HiveConf hiveConf =
+        conf instanceof HiveConf ? (HiveConf) conf : new HiveConf(conf, HiveUtils.class);
+    try {
+      hive = Hive.get(hiveConf);
+    } catch (HiveException e) {
+      throw new RuntimeException(e);
+    }
     String[] dbAndTableNames = tableDesc.getTableName().split("\\.");
     if (dbAndTableNames.length != 2
         || dbAndTableNames[0].isEmpty()
@@ -242,8 +248,8 @@ public abstract class BigQueryStorageHandlerBase
     }
     Table table;
     try {
-      table = metastoreClient.getTable(dbAndTableNames[0], dbAndTableNames[1]);
-    } catch (TException e) {
+      table = hive.getTable(dbAndTableNames[0], dbAndTableNames[1]);
+    } catch (HiveException e) {
       throw new RuntimeException(e);
     }
     // Convert the Hive schema to BigQuery schema

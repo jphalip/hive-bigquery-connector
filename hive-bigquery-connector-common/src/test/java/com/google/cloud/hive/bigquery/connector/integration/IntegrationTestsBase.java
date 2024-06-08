@@ -90,6 +90,8 @@ public abstract class IntegrationTestsBase {
     } catch (StorageException e) {
       if (e.getCode() == 409) {
         // The bucket already exists, which is okay.
+      } else {
+        throw new RuntimeException(e);
       }
     }
 
