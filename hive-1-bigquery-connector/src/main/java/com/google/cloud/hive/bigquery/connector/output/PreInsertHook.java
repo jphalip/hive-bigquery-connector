@@ -62,7 +62,10 @@ public class PreInsertHook implements ExecuteWithHookContext {
       return;
     }
 
-    // Parse and analyze the semantics of the Hive query
+    // Parse and analyze the semantics of the Hive query.
+    // We have to do this because unfortunately the WriteEntity objects in hookContext.getOutputs()
+    // are systematically marked as being of type INSERT_OVERWRITE, regardless of whether it is
+    // an "INSERT OVERWRITE" query or a regular "INSERT" query.
     QBParseInfo parseInfo;
     try {
       Configuration conf = hookContext.getConf();
