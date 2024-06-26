@@ -16,7 +16,6 @@
 package com.google.cloud.hive.bigquery.connector;
 
 import com.google.cloud.bigquery.Schema;
-import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.TableInfo;
 import com.google.cloud.bigquery.connector.common.BigQueryClient;
 import com.google.cloud.bigquery.connector.common.BigQueryClient.CreateTableOptions;
@@ -46,11 +45,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
 import org.apache.hadoop.hive.ql.hooks.ExecuteWithHookContext;
-import org.apache.hadoop.hive.ql.metadata.Hive;
 import org.apache.hadoop.hive.ql.metadata.HiveException;
 import org.apache.hadoop.hive.ql.metadata.HiveStorageHandler;
 import org.apache.hadoop.hive.ql.metadata.HiveStoragePredicateHandler;
-import org.apache.hadoop.hive.ql.metadata.Table;
 import org.apache.hadoop.hive.ql.plan.ExprNodeDesc;
 import org.apache.hadoop.hive.ql.plan.ExprNodeGenericFuncDesc;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
@@ -217,45 +214,6 @@ public abstract class BigQueryStorageHandlerBase
     }
   }
 
-  public Schema getBigQuerySchema(Injector injector, TableDesc tableDesc, TableId tableId) {
-    if (HCatalogUtils.isHCatalogOutputJob(conf)) {
-      // With Pig and HCatalog on Dataproc, we currently cannot the Hive Metastore to retrieve
-      // the Hive schema. So we fetch the schema directly from BigQuery, which means that the
-      // BigQuery table must already exist.
-      // TODO: See if we can remove this limitation
-      TableInfo bqTableInfo = injector.getInstance(BigQueryClient.class).getTable(tableId);
-      if (bqTableInfo == null) {
-        throw new RuntimeException("BigQuery table does not exist: " + tableId);
-      }
-      return bqTableInfo.getDefinition().getSchema();
-    }
-    // Fetch the Hive schema
-    Hive hive;
-    HiveConf hiveConf =
-        conf instanceof HiveConf ? (HiveConf) conf : new HiveConf(conf, HiveUtils.class);
-    try {
-      hive = Hive.get(hiveConf);
-    } catch (HiveException e) {
-      throw new RuntimeException(e);
-    }
-    String[] dbAndTableNames = tableDesc.getTableName().split("\\.");
-    if (dbAndTableNames.length != 2
-        || dbAndTableNames[0].isEmpty()
-        || dbAndTableNames[1].isEmpty()) {
-      throw new IllegalArgumentException(
-          "Invalid table name format. Expected format 'dbName.tblName'. Received: "
-              + tableDesc.getTableName());
-    }
-    Table table;
-    try {
-      table = hive.getTable(dbAndTableNames[0], dbAndTableNames[1]);
-    } catch (HiveException e) {
-      throw new RuntimeException(e);
-    }
-    // Convert the Hive schema to BigQuery schema
-    return BigQuerySchemaConverter.toBigQuerySchema(table.getSd());
-  }
-
   @Override
   public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties) {
     Properties tableProperties = tableDesc.getProperties();
@@ -280,13 +238,8 @@ public abstract class BigQueryStorageHandlerBase
     // Set config for the GCS Connector
     setGCSAccessTokenProvider(conf);
 
-    // Retrieve the BigQuery schema
-    TableId tableId =
-        BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY));
-    Injector injector =
-        Guice.createInjector(
-            new BigQueryClientModule(), new HiveBigQueryConnectorModule(conf, tableProperties));
-    Schema bigQuerySchema = getBigQuerySchema(injector, tableDesc, tableId);
+    // Figure out the Hive table's corresponding BigQuery schema
+    Schema bigQuerySchema = BigQuerySchemaConverter.toBigQuerySchema(conf, tableDesc);
 
     // More special treatment for HCatalog
     if (HCatalogUtils.isHCatalogOutputJob(conf)) {
@@ -306,6 +259,9 @@ public abstract class BigQueryStorageHandlerBase
         BigQueryUtil.parseTableId(tableProperties.getProperty(HiveBigQueryConfig.TABLE_KEY)));
 
     if (opts.getWriteMethod().equals(HiveBigQueryConfig.WRITE_METHOD_INDIRECT)) {
+      Injector injector =
+          Guice.createInjector(
+              new BigQueryClientModule(), new HiveBigQueryConnectorModule(conf, tableProperties));
       configureJobDetailsForIndirectWrite(
           opts, jobDetails, injector.getInstance(BigQueryCredentialsSupplier.class));
     }
