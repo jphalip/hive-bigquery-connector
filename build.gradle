@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+    id 'com.diffplug.spotless'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+
+test {
+    useJUnitPlatform()
+    forkEvery = 1
+    maxParallelForks = 1
+}

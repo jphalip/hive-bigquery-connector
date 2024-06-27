@@ -1,0 +1,8 @@
+rootProject.name = 'hive-bigquery-connector'
+
+include 'shared'
+include 'hive-1-bigquery-connector'
+include 'hive-2-bigquery-connector'
+include 'hive-3-bigquery-connector'
+
+include 'shaded-test-deps'
