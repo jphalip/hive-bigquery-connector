@@ -48,7 +48,7 @@ public class JobUtils {
     try {
       Properties buildProperties = new Properties();
       buildProperties.load(
-          JobUtils.class.getResourceAsStream("/hive-bigquery-connector.properties"));
+          JobUtils.class.getResourceAsStream("hive-bigquery-connector.properties"));
       return buildProperties;
     } catch (IOException e) {
       throw new UncheckedIOException(e);

@@ -24,5 +24,32 @@ subprojects {
 //    relocate 'com.lmax', 'disruptor'
 
         mergeServiceFiles()
+
+        dependsOn('jar')
+    }
+
+    // Create the build properties file ------------------------------------------------------
+
+    tasks.register('createBuildPropertiesFile') {
+        doLast {
+            String path = "$projectDir/src/main/resources/com/google/cloud/hive/bigquery/connector/utils/"
+            File dir = new File(path)
+            dir.mkdirs()
+            new File("$path/hive-bigquery-connector.properties").withWriter { w ->
+                Properties p = new Properties()
+                p['connector.version'] = parent.parent.parent.project.version.toString()
+                p.each { key, value ->
+                    w.write("$key=$value\n")
+                }
+            }
+        }
+    }
+
+    processResources {
+        dependsOn tasks.named('createBuildPropertiesFile')
+    }
+
+    classes {
+        dependsOn processResources
     }
 }

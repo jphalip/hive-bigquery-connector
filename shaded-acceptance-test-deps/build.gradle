@@ -28,4 +28,6 @@ shadowJar {
     relocate 'io.opencensus', 'hive.acceptance.repackaged.io.opencensus'
 
     mergeServiceFiles()
+
+    dependsOn('jar')
 }
