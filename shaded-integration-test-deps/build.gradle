@@ -1,0 +1,82 @@
+subprojects {
+    configurations.all {
+        exclude group: 'org.pentaho', module: '*'
+    }
+
+    afterEvaluate { subproject ->
+        subproject.dependencies {
+            // Hadoop dependencies
+            implementation("org.apache.hadoop:hadoop-common:${subproject.hadoopVersion}") {
+                exclude group: 'com.google.guava', module: 'guava'
+                exclude group: 'org.apache.avro', module: 'avro'
+            }
+            implementation("org.apache.hadoop:hadoop-mapreduce-client-common:${subproject.hadoopVersion}") {
+                exclude group: 'com.google.guava', module: 'guava'
+                exclude group: 'org.apache.avro', module: 'avro'
+            }
+
+            // Hive dependencies
+            implementation("org.apache.hive:hive-exec:${subproject.hiveVersion}") {
+                exclude group: 'org.pentaho', module: '*'
+                exclude group: 'org.apache.hadoop', module: '*'
+            }
+            implementation("org.apache.hive:hive-common:${subproject.hiveVersion}") {
+                exclude group: 'org.apache.hadoop', module: '*'
+                exclude group: 'com.github.joshelser', module: 'dropwizard-metrics-hadoop-metrics2-reporter'
+            }
+            implementation("org.apache.hive:hive-service:${subproject.hiveVersion}") {
+                exclude group: 'org.pentaho', module: '*'
+                exclude group: 'org.apache.hadoop', module: '*'
+                exclude group: 'org.apache.hbase', module: '*'
+                exclude group: 'org.apache.parquet', module: 'parquet-hadoop-bundle'
+                exclude group: 'com.github.joshelser', module: 'dropwizard-metrics-hadoop-metrics2-reporter'
+                exclude group: 'com.lmax', module: 'disruptor'
+            }
+            implementation("org.apache.hive.hcatalog:hive-hcatalog-pig-adapter:${subproject.hiveVersion}") {
+                exclude group: 'org.apache.hive', module: 'hive-exec'
+                exclude group: 'org.apache.hadoop', module: '*'
+                exclude group: 'org.apache.pig', module: '*'
+            }
+
+            // Tez dependencies
+            implementation("org.apache.tez:tez-dag:${subproject.tezVersion}") {
+                exclude group: 'org.apache.hadoop', module: '*'
+            }
+            implementation("org.apache.tez:tez-common:${subproject.tezVersion}") {
+                exclude group: 'org.apache.hadoop', module: '*'
+            }
+            implementation("org.apache.tez:tez-mapreduce:${subproject.tezVersion}") {
+                exclude group: 'org.apache.hadoop', module: '*'
+            }
+
+            // Pig dependency
+            implementation("org.apache.pig:pig:${subproject.pigVersion}${subproject.pigClassifier ? "${subproject.pigClassifier}" : ''}")
+        }
+    }
+
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    shadowJar {
+        archiveClassifier.set('')
+
+        zip64 true
+
+        exclude 'module-info.class'
+        exclude 'META-INF/*.SF'
+        exclude 'META-INF/*.DSA'
+        exclude 'META-INF/*.RSA'
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+
+        relocate 'com.google.common', 'hive.integration.repackaged.com.google.common'
+        relocate 'com.google.gson', 'hive.integration.repackaged.com.google.gson'
+        relocate 'com.google.protobuf', 'hive.integration.repackaged.com.google.protobuf'
+        relocate 'io.netty', 'hive.integration.repackaged.io.netty'
+        relocate 'org.apache.arrow', 'hive.integration.repackaged.com.org.apache.arrow'
+//    relocate 'com.lmax', 'disruptor'
+
+        mergeServiceFiles()
+    }
+}

@@ -1,6 +1,0 @@
-ext {
-    hadoopVersion = '3.3.3'
-    hiveVersion = '3.1.3'
-    tezVersion = '0.10.1'
-    pigVersion = '0.17.0'
-}

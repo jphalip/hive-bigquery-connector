@@ -1,0 +1,7 @@
+ext {
+    hadoopVersion = '2.6.4'
+    hiveVersion = '1.2.1'
+    tezVersion = '0.7.0'
+    pigVersion = '0.16.0'
+    pigClassifier = ':h2'
+}

@@ -1,0 +1,62 @@
+plugins {
+    id 'java-test-fixtures'
+}
+
+ext {
+//    hadoopVersion = '3.3.3'
+//    hiveVersion = '3.1.3'
+//    tezVersion = '0.10.1'
+    // TODO: Use this pig version here?
+    pigVersion = '0.17.0'
+    pigClassifier = ''
+    shadedDeps = 'shaded-integration-test-deps-hive3.1.2-hadoop2.10.2'
+}
+
+archivesBaseName = 'hive-bigquery-connector-common'
+
+
+//// TODO: DO we need this?
+//configurations.all {
+//    resolutionStrategy {
+//        force "com.google.guava:guava:${guavaVersion}"
+//    }
+//}
+
+dependencies {
+    api "com.google.guava:guava:${guavaVersion}"
+    api "com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}"
+    api "com.google.cloud.spark:bigquery-connector-common:${bigqueryConnectorCommonVersion}"
+
+    compileOnly "com.google.cloud.bigdataoss:gcs-connector:${gcsConnectorVersion}:shaded"
+    compileOnly project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+
+    testFixturesImplementation "org.apache.pig:pig:${pigVersion}${pigClassifier}"
+//    testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
+
+
+    testFixturesImplementation project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    testFixturesImplementation("io.github.hiverunner:hiverunner:${hiverunnerVersion}") {
+        exclude group: 'org.apache.tez', module: '*'
+        exclude group: 'org.apache.hive', module: 'hive-serde'
+        exclude group: 'org.apache.hive', module: 'hive-upgrade-acid'
+        exclude group: 'org.apache.hive.hcatalog', module: 'hive-webhcat-java-client'
+        exclude group: 'org.apache.hive', module: 'hive-jdbc'
+        exclude group: 'org.apache.hive', module: 'hive-service'
+        exclude group: 'org.apache.hadoop', module: 'hadoop-mapreduce-client-common'
+        exclude group: 'org.apache.hadoop', module: 'hadoop-annotations'
+        exclude group: 'org.apache.hadoop', module: 'hadoop-yarn-client'
+        exclude group: 'org.apache.hadoop', module: 'hadoop-mapreduce-client-core'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+        exclude group: 'org.junit.jupiter', module: '*'
+    }
+    testFixturesImplementation("com.google.truth:truth:${truthVersion}") {
+        exclude group: 'com.google.guava', module: 'guava'
+        exclude group: 'junit', module: 'junit'
+    }
+    testFixturesImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testImplementation project(path: ':shaded-acceptance-test-deps', configuration: 'shadow')
+}
+
+compileJava.dependsOn(':shaded-integration-test-deps:shaded-integration-test-deps-hive3.1.2-hadoop2.10.2:shadowJar')
+compileTestJava.dependsOn(':shaded-acceptance-test-deps:shadowJar')

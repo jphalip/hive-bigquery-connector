@@ -1,4 +1,5 @@
 target/
+build/
 .flattened-pom.xml
 pom.xml.tag
 pom.xml.releaseBackup

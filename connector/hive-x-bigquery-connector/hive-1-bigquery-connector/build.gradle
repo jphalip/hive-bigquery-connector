@@ -1,0 +1,14 @@
+archivesBaseName = 'hive-1-bigquery-connector'
+
+ext {
+    shadedDeps = 'shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
+}
+
+dependencies {
+    implementation project(':connector:hive-bigquery-connector-common')
+    compileOnly project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    testImplementation project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    testImplementation testFixtures(project(':connector:hive-bigquery-connector-common'))
+}
+
+compileJava.dependsOn(":shaded-integration-test-deps:${shadedDeps}:shadowJar")
