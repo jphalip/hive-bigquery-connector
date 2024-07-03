@@ -6,7 +6,8 @@ ext {
     // TODO: Use this pig version here?
     pigVersion = '0.17.0'
     pigClassifier = ''
-    shadedDeps = 'shaded-integration-test-deps-hive3.1.2-hadoop2.10.2'
+//    shadedDeps = 'shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
+//    shadedDeps = 'shaded-integration-test-deps-hive3.1.2-hadoop2.10.2'
 }
 
 archivesBaseName = 'hive-bigquery-connector-common'
@@ -19,19 +20,20 @@ archivesBaseName = 'hive-bigquery-connector-common'
 //    }
 //}
 
+
 dependencies {
     api "com.google.guava:guava:${guavaVersion}"
     api "com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}"
     api "com.google.cloud.spark:bigquery-connector-common:${bigqueryConnectorCommonVersion}"
 
     compileOnly "com.google.cloud.bigdataoss:gcs-connector:${gcsConnectorVersion}:shaded"
-    compileOnly project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    compileOnly project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
 
     testFixturesImplementation "org.apache.pig:pig:${pigVersion}${pigClassifier}"
 //    testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
 
 
-    testFixturesImplementation project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    testFixturesImplementation project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
     testFixturesImplementation("io.github.hiverunner:hiverunner:${hiverunnerVersion}") {
         exclude group: 'org.apache.tez', module: '*'
         exclude group: 'org.apache.hive', module: 'hive-serde'
@@ -52,8 +54,9 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
     testFixturesImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testFixturesImplementation "org.junit.platform:junit-platform-launcher:${junitPlatformLauncherVersion}"
     testImplementation project(path: ':shaded-acceptance-test-deps', configuration: 'shadow')
 }
 
-compileJava.dependsOn(':shaded-integration-test-deps:shaded-integration-test-deps-hive3.1.2-hadoop2.10.2:shadowJar')
+compileJava.dependsOn(":shaded-integration-test-deps:${System.getProperty('shadedDeps')}:shadowJar")
 compileTestJava.dependsOn(':shaded-acceptance-test-deps:shadowJar')

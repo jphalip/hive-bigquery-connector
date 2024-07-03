@@ -1,15 +1,33 @@
 rootProject.name = 'hive-bigquery-connector'
 
 include 'connector:hive-bigquery-connector-common'
-include 'connector:hive-x-bigquery-connector:hive-1-bigquery-connector'
-include 'connector:hive-x-bigquery-connector:hive-2-bigquery-connector'
-include 'connector:hive-x-bigquery-connector:hive-3-bigquery-connector'
-
-include 'shaded-integration-test-deps:shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
-include 'shaded-integration-test-deps:shaded-integration-test-deps-hive2.3.6-hadoop2.7.0'
-include 'shaded-integration-test-deps:shaded-integration-test-deps-hive2.3.9-hadoop2.10.2'
-include 'shaded-integration-test-deps:shaded-integration-test-deps-hive3.1.2-hadoop2.10.2'
-include 'shaded-integration-test-deps:shaded-integration-test-deps-dataproc20'
-include 'shaded-integration-test-deps:shaded-integration-test-deps-dataproc21'
-
 include 'shaded-acceptance-test-deps'
+
+def useHive1 = System.getProperty("useHive1").toBoolean()
+def useHive2 = System.getProperty("useHive2").toBoolean()
+def useHive3 = System.getProperty("useHive3").toBoolean()
+
+if ([useHive1, useHive2, useHive3].findAll{it}.size() != 1) {
+    throw new GradleException("You must set one (and only one) of this properties: useHive1, useHive2, useHive3")
+}
+
+if (useHive1) {
+    include 'connector:hive-x-bigquery-connector:hive-1-bigquery-connector'
+    include 'shaded-integration-test-deps:shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
+    System.setProperty('shadedDeps', 'shaded-integration-test-deps-hive1.2.1-hadoop2.6.4')
+}
+
+if (useHive2) {
+    include 'connector:hive-x-bigquery-connector:hive-2-bigquery-connector'
+    include 'shaded-integration-test-deps:shaded-integration-test-deps-hive2.3.6-hadoop2.7.0'
+    //include 'shaded-integration-test-deps:shaded-integration-test-deps-hive2.3.9-hadoop2.10.2'
+    System.setProperty('shadedDeps', 'shaded-integration-test-deps-hive2.3.6-hadoop2.7.0')
+}
+
+if (useHive3) {
+    include 'connector:hive-x-bigquery-connector:hive-3-bigquery-connector'
+    include 'shaded-integration-test-deps:shaded-integration-test-deps-hive3.1.2-hadoop2.10.2'
+    //include 'shaded-integration-test-deps:shaded-integration-test-deps-dataproc20'
+    //include 'shaded-integration-test-deps:shaded-integration-test-deps-dataproc21'
+    System.setProperty('shadedDeps', 'shaded-integration-test-deps-hive3.1.2-hadoop2.10.2')
+}

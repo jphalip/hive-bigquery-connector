@@ -1,14 +1,52 @@
 archivesBaseName = 'hive-1-bigquery-connector'
 
 ext {
-    shadedDeps = 'shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
+//    shadedDeps = 'shaded-integration-test-deps-hive1.2.1-hadoop2.6.4'
 }
 
 dependencies {
     implementation project(':connector:hive-bigquery-connector-common')
-    compileOnly project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
-    testImplementation project(path: ":shaded-integration-test-deps:${shadedDeps}", configuration: 'shadow')
+    compileOnly project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
+    testImplementation project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
     testImplementation testFixtures(project(':connector:hive-bigquery-connector-common'))
 }
 
-compileJava.dependsOn(":shaded-integration-test-deps:${shadedDeps}:shadowJar")
+compileJava.dependsOn(":shaded-integration-test-deps:${System.getProperty('shadedDeps')}:shadowJar")
+
+test {
+    useJUnitPlatform()
+    forkEvery = 1
+    maxParallelForks = 1
+
+//    doFirst {
+//        systemProperty 'hiveconf_datanucleus.ConnectionPoolingType', 'DBCP'
+//        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize', '1'
+//        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.minIdle', '1'
+//        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle', '1'
+//    }
+
+    systemProperties = [
+            'hiveconf_datanucleus.ConnectionPoolingType': 'DBCP',
+            'hiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize': '1',
+            'hiveconf_datanucleus.ConnectionPoolingDBCP.minIdle': '1',
+            'hiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle': '1'
+    ]
+
+//    allJvmArgs = allJvmArgs + [
+//            '-Dhiveconf_datanucleus.ConnectionPoolingType=DBCP',
+//            '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize=1',
+//            '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.minIdle=1',
+//            '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle=1'
+//    ]
+
+//    beforeTest { descriptor ->
+//        System.setProperty('hiveconf_datanucleus.ConnectionPoolingType', 'DBCP')
+//        System.setProperty('hiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize', '1')
+//        System.setProperty('hiveconf_datanucleus.ConnectionPoolingDBCP.minIdle', '1')
+//        System.setProperty('hiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle', '1')
+//    }
+//    jvmArgs = ['-Dhiveconf_datanucleus.ConnectionPoolingType=DBCP',
+//               '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize=1',
+//               '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.minIdle=1',
+//               '-Dhiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle=1']
+}

@@ -2,6 +2,19 @@ subprojects {
 
     apply plugin: 'com.github.johnrengelman.shadow'
 
+    dependencies {
+        if (System.getProperty("useHive1").toBoolean()) {
+            testImplementation "org.datanucleus:datanucleus-api-jdo:3.2.6"
+            testImplementation "org.datanucleus:datanucleus-core:3.2.10"
+            testImplementation "org.datanucleus:datanucleus-rdbms:3.2.9"
+        }
+        if (System.getProperty("useHive2").toBoolean() || System.getProperty("useHive3").toBoolean()) {
+            testImplementation "org.datanucleus:datanucleus-api-jdo:4.2.4"
+            testImplementation "org.datanucleus:datanucleus-core:4.1.17"
+            testImplementation "org.datanucleus:datanucleus-rdbms:4.1.19"
+        }
+    }
+
     shadowJar {
         archiveClassifier.set('')
 
@@ -21,7 +34,6 @@ subprojects {
         relocate 'com.google.protobuf', 'hive.integration.repackaged.com.google.protobuf'
         relocate 'io.netty', 'hive.integration.repackaged.io.netty'
         relocate 'org.apache.arrow', 'hive.integration.repackaged.com.org.apache.arrow'
-//    relocate 'com.lmax', 'disruptor'
 
         mergeServiceFiles()
 

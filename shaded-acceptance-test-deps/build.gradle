@@ -13,6 +13,14 @@ shadowJar {
 
     zip64 true
 
+//    manifest {
+//        attributes(
+//                "Created-By": "Gradle ${gradle.gradleVersion}",
+//                "Implementation-Title": project.name,
+//                "Implementation-Version": project.version
+//        )
+//    }
+
     exclude 'module-info.class'
     exclude 'META-INF/*.SF'
     exclude 'META-INF/*.DSA'

@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.transformers.XmlAppendingTransformer;
+
 subprojects {
     configurations.all {
         exclude group: 'org.pentaho', module: '*'
@@ -61,6 +63,16 @@ subprojects {
 
         zip64 true
 
+//        manifest {
+//            attributes(
+//                    "Premain-Class": "org.datanucleus.enhancer.DataNucleusClassFileTransformer",
+//                    "Bundle-SymbolicName": "org.datanucleus;singleton:=true"
+//            )
+//        }
+//        transform(XmlAppendingTransformer) {
+//            resource = 'plugin.xml'
+//        }
+
         exclude 'module-info.class'
         exclude 'META-INF/*.SF'
         exclude 'META-INF/*.DSA'
@@ -70,13 +82,17 @@ subprojects {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
 
+        // Exclude Datanucleus packages:
+        exclude 'org/datanucleus/**'
+
         def packagesToRelocate = [
                 'com.google.common',
                 'com.google.gson',
                 'com.google.protobuf',
                 'io.netty',
                 'org.apache.arrow',
-                'org.apache.http'
+                'org.apache.http',
+//                'org.datanucleus'
         ]
         packagesToRelocate.each { pkg ->
             relocate pkg, "hive.integration.repackaged.${pkg}"
@@ -91,5 +107,7 @@ subprojects {
 //    relocate 'com.lmax', 'disruptor'
 
         mergeServiceFiles()
+
+//        transform(ManifestResourceTransformer.class)
     }
 }

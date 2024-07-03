@@ -19,6 +19,7 @@ import static com.google.cloud.hive.bigquery.connector.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.google.cloud.bigquery.*;
+import com.google.cloud.hive.bigquery.connector.SystemPropertyOverridesExtension;
 import com.google.cloud.hive.bigquery.connector.TestLogAppender;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
 import com.google.cloud.hive.bigquery.connector.utils.JobUtils;
@@ -55,7 +56,7 @@ import org.junit.jupiter.params.provider.Arguments;
 //  https://issues.apache.org/jira/browse/HIVE-25261, which was fixed in Hive 4.0.0,
 //  so we might have to find a workaround to make those go away with Hive 3.X.X.
 
-@ExtendWith(HiveRunnerExtension.class)
+@ExtendWith({SystemPropertyOverridesExtension.class, HiveRunnerExtension.class})
 public abstract class IntegrationTestsBase {
 
   protected static String dataset;
@@ -332,6 +333,8 @@ public abstract class IntegrationTestsBase {
         hive.setHiveConfValue(key, value);
       }
     }
+
+    System.getProperties().setProperty("hiveconf_datanucleus.connectionPoolingType", "dbcp-builtin");
 
     hive.start();
     runHiveQuery("CREATE DATABASE source_db");

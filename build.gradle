@@ -11,7 +11,7 @@ version = '2.1.0-SNAPSHOT'
 
 ext {
     junitJupiterVersion = '5.10.2'
-    junitPlatformEngineVersion = '1.10.2'
+//    junitPlatformEngineVersion = '1.10.2'
     junitPlatformLauncherVersion = '1.10.2'
     truthVersion = '1.4.2'
 
@@ -64,6 +64,10 @@ allprojects {
  * limitations under the License.
  */""")
         }
+        groovyGradle {
+            target '*.gradle'
+            greclipse()
+        }
     }
 
     dependencies {
@@ -94,7 +98,7 @@ allprojects {
         manifest {
             attributes(
                     'Implementation-Title': project.name,
-                    'Implementation-Version': project.version
+                    'Implementation-Version': project.version  // FIXME: This doesn't work
             )
         }
     }

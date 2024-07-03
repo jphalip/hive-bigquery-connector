@@ -17,6 +17,7 @@ package com.google.cloud.hive.bigquery.connector.utils.bq;
 
 import com.google.cloud.hive.bigquery.connector.HiveCompat;
 import com.google.cloud.hive.bigquery.connector.config.HiveBigQueryConfig;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -36,21 +37,24 @@ public class BigQueryValueConverter {
 
   // In Hive 1, HiveDecimal doesn't have a `bigIntegerBytesScaled()` method.
   // We use this static variable to identify if the method is available.
-  private static boolean hasBigIntegerBytesScaled;
+  private static Method bigIntegerBytesScaled;
 
   static {
     try {
-      Method method = HiveDecimal.class.getMethod("bigIntegerBytesScaled", int.class);
-      hasBigIntegerBytesScaled = (method != null);
+      bigIntegerBytesScaled = HiveDecimal.class.getMethod("bigIntegerBytesScaled", int.class);
     } catch (NoSuchMethodException e) {
-      hasBigIntegerBytesScaled = false;
+      bigIntegerBytesScaled = null;
     }
   }
 
   public static byte[] getBigIntegerBytesScaled(HiveDecimal hiveDecimal, int scale) {
-    if (hasBigIntegerBytesScaled) {
+    if (bigIntegerBytesScaled != null) {
       // Use bigIntegerBytesScaled if available
-      return hiveDecimal.bigIntegerBytesScaled(scale);
+      try {
+        return (byte[]) bigIntegerBytesScaled.invoke(hiveDecimal, scale);
+      } catch (IllegalAccessException | InvocationTargetException e) {
+        throw new RuntimeException(e);
+      }
     } else {
       // Alternative approach for older Hive versions
       BigDecimal decimal = hiveDecimal.bigDecimalValue();

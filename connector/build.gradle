@@ -1,34 +1,12 @@
-test {
-    useJUnitPlatform()
-    forkEvery = 1
-    maxParallelForks = 1
-}
-
-
+// TODO: Is this the right place for this?
 subprojects {
-    apply plugin: 'com.github.johnrengelman.shadow'
-
-    shadowJar {
-        archiveClassifier.set('')
-
-        zip64 true
-
-        exclude 'module-info.class'
-        exclude 'META-INF/*.SF'
-        exclude 'META-INF/*.DSA'
-        exclude 'META-INF/*.RSA'
-        exclude 'META-INF/MANIFEST.MF'
-        exclude 'META-INF/DEPENDENCIES'
-        exclude 'META-INF/LICENSE'
-        exclude 'META-INF/NOTICE'
-
-        relocate 'com.google.common', 'hive.integration.repackaged.com.google.common'
-        relocate 'com.google.gson', 'hive.integration.repackaged.com.google.gson'
-        relocate 'com.google.protobuf', 'hive.integration.repackaged.com.google.protobuf'
-        relocate 'io.netty', 'hive.integration.repackaged.io.netty'
-        relocate 'org.apache.arrow', 'hive.integration.repackaged.com.org.apache.arrow'
-//    relocate 'com.lmax', 'disruptor'
-
-        mergeServiceFiles()
+    test {
+        useJUnitPlatform()
+        forkEvery = 1
+        maxParallelForks = 1
+        systemProperty 'hiveconf_datanucleus.ConnectionPoolingType', 'DBCP'
+        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.maxPoolSize', '1'
+        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.minIdle', '1'
+        systemProperty 'hiveconf_datanucleus.ConnectionPoolingDBCP.maxIdle', '1'
     }
 }

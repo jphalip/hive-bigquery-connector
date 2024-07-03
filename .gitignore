@@ -1,5 +1,6 @@
 target/
 build/
+gradle.properties
 .flattened-pom.xml
 pom.xml.tag
 pom.xml.releaseBackup

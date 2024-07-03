@@ -174,7 +174,7 @@ public class BigQueryInputSplit extends HiveInputSplit implements Writable {
 
     // Retrieve the table's column names
     String columnNameDelimiter =
-        jobConf.get(serdeConstants.COLUMN_NAME_DELIMITER, String.valueOf(SerDeUtils.COMMA));
+        jobConf.get(HiveBigQueryConfig.HIVE_COLUMN_NAME_DELIMITER, String.valueOf(SerDeUtils.COMMA));
     List<String> columnNames =
         new ArrayList<>(
             Arrays.asList(
