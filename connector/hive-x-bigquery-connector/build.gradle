@@ -13,7 +13,15 @@ subprojects {
             testImplementation "org.datanucleus:datanucleus-core:4.1.17"
             testImplementation "org.datanucleus:datanucleus-rdbms:4.1.19"
         }
+
+        implementation project(':connector:hive-bigquery-connector-common')
+        compileOnly project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
+        testImplementation project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
+        testImplementation testFixtures(project(':connector:hive-bigquery-connector-common'))
+        testImplementation "com.google.cloud.bigdataoss:gcs-connector:${gcsConnectorVersion}:shaded"
     }
+
+    compileJava.dependsOn(":shaded-integration-test-deps:${System.getProperty('shadedDeps')}:shadowJar")
 
     shadowJar {
         archiveClassifier.set('')
@@ -29,11 +37,16 @@ subprojects {
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/NOTICE'
 
-        relocate 'com.google.common', 'hive.integration.repackaged.com.google.common'
-        relocate 'com.google.gson', 'hive.integration.repackaged.com.google.gson'
-        relocate 'com.google.protobuf', 'hive.integration.repackaged.com.google.protobuf'
-        relocate 'io.netty', 'hive.integration.repackaged.io.netty'
-        relocate 'org.apache.arrow', 'hive.integration.repackaged.com.org.apache.arrow'
+        def packagesToRelocate = [
+                'com.google.common',
+                'com.google.gson',
+                'com.google.protobuf',
+                'io.netty',
+                'org.apache.arrow',
+        ]
+        packagesToRelocate.each { pkg ->
+            relocate pkg, "hive.bigquery.connector.repackaged.${pkg}"
+        }
 
         mergeServiceFiles()
 

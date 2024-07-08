@@ -1,5 +1,3 @@
-import com.github.jengelman.gradle.plugins.shadow.transformers.XmlAppendingTransformer;
-
 subprojects {
     configurations.all {
         exclude group: 'org.pentaho', module: '*'
@@ -63,16 +61,6 @@ subprojects {
 
         zip64 true
 
-//        manifest {
-//            attributes(
-//                    "Premain-Class": "org.datanucleus.enhancer.DataNucleusClassFileTransformer",
-//                    "Bundle-SymbolicName": "org.datanucleus;singleton:=true"
-//            )
-//        }
-//        transform(XmlAppendingTransformer) {
-//            resource = 'plugin.xml'
-//        }
-
         exclude 'module-info.class'
         exclude 'META-INF/*.SF'
         exclude 'META-INF/*.DSA'
@@ -89,25 +77,16 @@ subprojects {
                 'com.google.common',
                 'com.google.gson',
                 'com.google.protobuf',
+                'com.google.flatbuffers',
                 'io.netty',
                 'org.apache.arrow',
                 'org.apache.http',
-//                'org.datanucleus'
+                'com.lmax.disruptor',
         ]
         packagesToRelocate.each { pkg ->
             relocate pkg, "hive.integration.repackaged.${pkg}"
         }
 
-//        relocate 'com.google.common', relocatePrefix + 'com.google.common'
-//        relocate 'com.google.gson', relocatePrefix + 'com.google.gson'
-//        relocate 'com.google.protobuf', relocatePrefix + 'com.google.protobuf'
-//        relocate 'io.netty', relocatePrefix + 'io.netty'
-//        relocate 'org.apache.arrow', relocatePrefix + 'com.org.apache.arrow'
-//        relocate 'org.apache.httpcomponents', relocatePrefix + 'org.apache.httpcomponents'
-//    relocate 'com.lmax', 'disruptor'
-
         mergeServiceFiles()
-
-//        transform(ManifestResourceTransformer.class)
     }
 }

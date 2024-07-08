@@ -30,9 +30,6 @@ dependencies {
     compileOnly project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
 
     testFixturesImplementation "org.apache.pig:pig:${pigVersion}${pigClassifier}"
-//    testImplementation "org.hamcrest:hamcrest:${hamcrestVersion}"
-
-
     testFixturesImplementation project(path: ":shaded-integration-test-deps:${System.getProperty('shadedDeps')}", configuration: 'shadow')
     testFixturesImplementation("io.github.hiverunner:hiverunner:${hiverunnerVersion}") {
         exclude group: 'org.apache.tez', module: '*'
